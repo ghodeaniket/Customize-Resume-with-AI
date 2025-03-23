@@ -8,18 +8,8 @@ services:
     depends_on:
       - postgres
       - redis
-    environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=resume_customizer_dev
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - OPENROUTER_API_KEY=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 # Replace with your real OpenRouter API key
-      - SERVICE_URL=http://localhost:8080
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
@@ -32,17 +22,8 @@ services:
     depends_on:
       - postgres
       - redis
-    environment:
-      - NODE_ENV=development
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=resume_customizer_dev
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - OPENROUTER_API_KEY=your-actual-api-key-here # Replace with your real OpenRouter API key
-      - SERVICE_URL=http://localhost:8080
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
