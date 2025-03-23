@@ -1,6 +1,7 @@
 // workers/resumeProcessor.js
 const Queue = require('bull');
 const axios = require('axios');
+const config = require('../config/config');
 const db = require('../models');
 const logger = require('../utils/logger');
 const { loadPromptTemplate } = require('../utils/promptManager');
@@ -11,8 +12,8 @@ const { fetchJobDescription } = require('../utils/jobScraper');
 const openrouterClient = axios.create({
   baseURL: 'https://openrouter.ai/api/v1',
   headers: {
-    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    'HTTP-Referer': process.env.SERVICE_URL, // Your service URL for tracking
+    'Authorization': `Bearer ${config.openrouter.apiKey}`,
+    'HTTP-Referer': config.openrouter.serviceUrl,
     'Content-Type': 'application/json'
   }
 });
@@ -20,8 +21,8 @@ const openrouterClient = axios.create({
 // Initialize queue
 const resumeQueue = new Queue('resume-processing', {
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379
+    host: config.redis.host,
+    port: config.redis.port
   }
 });
 
@@ -51,9 +52,9 @@ resumeQueue.process('customize-resume', async (job) => {
     }
     
     // Get model selection from job data or use default
-    const profilerModel = job.data.profilerModel || process.env.DEFAULT_PROFILER_MODEL || 'anthropic/claude-3-opus';
-    const researcherModel = job.data.researcherModel || process.env.DEFAULT_RESEARCHER_MODEL || 'anthropic/claude-3-opus';
-    const strategistModel = job.data.strategistModel || process.env.DEFAULT_STRATEGIST_MODEL || 'anthropic/claude-3-opus';
+    const profilerModel = job.data.profilerModel || config.openrouter.defaultModels.profiler;
+    const researcherModel = job.data.researcherModel || config.openrouter.defaultModels.researcher;
+    const strategistModel = job.data.strategistModel || config.openrouter.defaultModels.strategist;
     
     // Step 1: Generate professional profile
     const profilerPrompt = await loadPromptTemplate('profiler');

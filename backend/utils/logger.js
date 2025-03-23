@@ -1,8 +1,9 @@
 // utils/logger.js
 const winston = require('winston');
+const config = require('../config/config');
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: config.logging.level,
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -21,7 +22,7 @@ const logger = winston.createLogger({
 });
 
 // If we're not in production, log to the console with more verbose formatting
-if (process.env.NODE_ENV !== 'production') {
+if (config.environment !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
