@@ -1,175 +1,108 @@
 # Resume Customizer
 
-AI-powered resume customization tool that helps you tailor your resume for specific job applications.
+## An AI-powered resume customization tool
 
-## Overview
+Resume Customizer is an application that helps job seekers tailor their resumes for specific job descriptions using AI. The system analyzes both the resume and job description, then generates a customized version of the resume that highlights relevant skills and experiences.
 
-Resume Customizer is a web application that uses AI to analyze job descriptions and customize resumes to maximize relevance and match rate. The application helps job seekers:
+## Architecture
 
-- Extract key requirements and skills from job descriptions
-- Highlight relevant experience and skills in their resumes
-- Optimize resume language for applicant tracking systems (ATS)
-- Create targeted versions of resumes for each job application
+The application consists of a backend API and a frontend user interface:
+
+- **Backend**: Node.js/Express API with PostgreSQL database and Redis for job queue
+- **Frontend**: React-based web application
+
+![System Architecture](system-architecture-3.mermaid)
 
 ## Features
 
-### Phase 1 (Current Implementation)
+- Upload resume in multiple formats (PDF, DOCX, HTML, JSON, Text)
+- Input job descriptions directly or via URL (LinkedIn, Indeed, Glassdoor, etc.)
+- AI-powered resume analysis and customization
+- Background processing with job queue
+- RESTful API for integration with other services
 
-- **Resume Management**: Upload, parse, and manage PDF and DOCX resumes
-- **Job Description Analysis**: Extract key skills, requirements, and responsibilities from job descriptions
-- **AI Customization**: Tailor resumes to specific job descriptions with adjustable customization levels
-- **Document Generation**: Download customized resumes in editable formats
+## Backend Setup
 
-## Tech Stack
+### Prerequisites
 
-- **Frontend**: React, Next.js, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: PostgreSQL with Prisma ORM
-- **AI Integration**: OpenAI/Anthropic API
-- **Document Processing**: PDF/DOCX parsing and generation
-- **Containerization**: Docker and Docker Compose
+- Node.js 18+
+- PostgreSQL
+- Redis
 
-## Getting Started
-
-### Using Docker (Recommended)
-
-This method uses Docker to set up the entire development environment, including the database.
-
-#### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
-
-#### Quick Start
+### Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/ghodeaniket/ResumeCustomiser.git
-   cd ResumeCustomiser
    ```
-
-2. Create a `.env` file in the root directory:
-   ```
-   OPENAI_API_KEY=your-openai-api-key  # Optional for testing
-   ```
-
-3. Run the setup script:
-   ```bash
-   ./setup-and-test.sh
-   ```
-
-4. Access the application at http://localhost:3000
-
-#### Manual Docker Commands
-
-Alternatively, you can run the Docker commands manually:
-
-```bash
-# Build the Docker images
-npm run docker:build
-
-# Start the containers
-npm run docker:up
-
-# Run database migrations
-npm run docker:prisma
-
-# View logs
-npm run docker:logs
-
-# Access the app container shell
-npm run docker:shell
-
-# Stop the containers
-npm run docker:down
-```
-
-### Traditional Setup (Without Docker)
-
-If you prefer not to use Docker, you can set up the project traditionally:
-
-#### Prerequisites
-
-- Node.js (v18 or newer)
-- npm or yarn
-- PostgreSQL database
-
-#### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ghodeaniket/ResumeCustomiser.git
-   cd ResumeCustomiser
+   git clone https://github.com/ghodeaniket/Customize-Resume-with-AI.git
+   cd Customize-Resume-with-AI
    ```
 
 2. Install dependencies:
-   ```bash
+   ```
+   cd backend
    npm install
    ```
 
-3. Create a `.env` file in the root directory:
+3. Create a `.env` file based on `.env.example`:
    ```
-   DATABASE_URL="postgresql://username:password@localhost:5432/resume_customizer"
-   NEXTAUTH_SECRET="your-secret-key"
-   NEXTAUTH_URL="http://localhost:3000"
-   OPENAI_API_KEY="your-openai-api-key"  # Optional for testing
+   cp .env.example .env
    ```
 
-4. Set up the database:
-   ```bash
-   npx prisma migrate dev
-   ```
+4. Update the `.env` file with your configuration values, especially:
+   - Database credentials
+   - Redis connection
+   - OpenRouter API key
 
 5. Start the development server:
-   ```bash
+   ```
    npm run dev
    ```
 
-6. Access the application at http://localhost:3000
+6. Start the worker (in a separate terminal):
+   ```
+   npm run worker
+   ```
 
-## Testing the Application
+### Running with Docker
 
-With the application running, you can test the following features:
+1. Make sure Docker and Docker Compose are installed
+2. Set your environment variables
+3. Run:
+   ```
+   docker-compose up
+   ```
 
-1. **Home Page**: Visit http://localhost:3000 to see the landing page
+## API Endpoints
 
-2. **Resume Management**:
-   - Go to http://localhost:3000/resumes
-   - Upload a resume (PDF or DOCX file)
-   - View resume details
+See [API Documentation](backend/api-docs.md) for detailed endpoint information.
 
-3. **Job Descriptions**:
-   - Go to http://localhost:3000/job-descriptions
-   - Add a new job description
-   - View job details and analysis
+### Resume Customization
 
-4. **Customization**:
-   - Go to http://localhost:3000/customize?resumeId=1&jobId=1
-   - Configure customization settings
-   - Generate a customized resume
+- `POST /api/v1/resume/customize`: Submit a resume for customization
+- `GET /api/v1/resume/status/:jobId`: Check job status
+- `GET /api/v1/resume/history`: Get job history
 
-## Development
+## Frontend
 
-### Project Structure
+The frontend application is built with React and provides a user-friendly interface for resume customization.
 
-```
-resume-customizer/
-├── src/
-│   ├── app/              # Next.js App Router pages
-│   ├── components/       # Reusable UI components
-│   └── utils/            # Utility functions
-├── prisma/               # Database schema
-├── public/               # Static assets
-└── docker-compose.yml    # Docker configuration
-```
+### Installation
 
-### Available Scripts
+1. Navigate to the frontend directory:
+   ```
+   cd frontend
+   ```
 
-- `npm run dev`: Start the development server
-- `npm run build`: Build the application
-- `npm run start`: Start the production server
-- `npm run lint`: Run ESLint
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Start the development server:
+   ```
+   npm run dev
+   ```
 
 ## License
 
-This project is licensed under the MIT License.
+MIT

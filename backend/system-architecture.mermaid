@@ -1,0 +1,66 @@
+flowchart TB
+    subgraph "Clients"
+        WebApp["Web Application"]
+        MobileApp["Mobile App"]
+        ThirdParty["3rd Party Integration"]
+    end
+    
+    subgraph "API Layer"
+        API["Express API Service"]
+        Auth["API Key Authentication"]
+        Rate["Rate Limiter"]
+    end
+    
+    subgraph "Processing"
+        Queue["Redis Queue"]
+        Worker["Worker Service"]
+        ResumeParser["Resume Parser<br>(PDF, DOCX, HTML, JSON)"]
+        JobScraper["Job Description Scraper<br>(LinkedIn, Indeed, etc.)"]
+    end
+    
+    subgraph "Storage"
+        DB["PostgreSQL Database"]
+        Templates["Prompt Templates"]
+    end
+    
+    subgraph "External Services"
+        OpenRouter["OpenRouter API<br>(Various LLM Models)"]
+    end
+    
+    WebApp --> API
+    MobileApp --> API
+    ThirdParty --> API
+    
+    API --> Auth
+    Auth --> Rate
+    Rate --> Queue
+    API --> DB
+    
+    Queue --> Worker
+    Worker --> ResumeParser
+    Worker --> JobScraper
+    Worker --> Templates
+    Worker --> DB
+    
+    ResumeParser -.-> Worker
+    JobScraper -.-> Worker
+    
+    Worker --> OpenRouter
+    
+    style WebApp fill:#f9f,stroke:#333,stroke-width:2px
+    style MobileApp fill:#f9f,stroke:#333,stroke-width:2px
+    style ThirdParty fill:#f9f,stroke:#333,stroke-width:2px
+    
+    style API fill:#bbf,stroke:#333,stroke-width:2px
+    style Auth fill:#bbf,stroke:#333,stroke-width:2px
+    style Rate fill:#bbf,stroke:#333,stroke-width:2px
+    
+    style Queue fill:#bfb,stroke:#333,stroke-width:2px
+    style Worker fill:#bfb,stroke:#333,stroke-width:2px
+    style ResumeParser fill:#bfb,stroke:#333,stroke-width:2px
+    style JobScraper fill:#bfb,stroke:#333,stroke-width:2px
+    
+    style DB fill:#fdb,stroke:#333,stroke-width:2px
+    style Templates fill:#fdb,stroke:#333,stroke-width:2px
+    
+    style OpenRouter fill:#fbb,stroke:#333,stroke-width:2px

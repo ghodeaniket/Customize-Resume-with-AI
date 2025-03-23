@@ -42,5 +42,18 @@
     "eslint-config-next": "14.1.0",
     "postcss": "^8.4.35",
     "prisma": "^5.10.0"
-  }
+  },
+  "description": "AI-powered resume customization tool that helps you tailor your resume for specific job applications.",
+  "main": "next.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghodeaniket/ResumeCustomiser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ghodeaniket/ResumeCustomiser/issues"
+  },
+  "homepage": "https://github.com/ghodeaniket/ResumeCustomiser#readme"
 }

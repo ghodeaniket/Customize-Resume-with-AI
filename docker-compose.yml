@@ -1,34 +1,73 @@
-version: '3'
+version: '3.8'
 
 services:
-  app:
+  api:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     depends_on:
-      - db
+      - postgres
+      - redis
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/resume_customizer
-      - NEXTAUTH_SECRET=your-docker-secret-key
-      - NEXTAUTH_URL=http://localhost:3000
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=resume_customizer_dev
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - SERVICE_URL=${SERVICE_URL}
     volumes:
-      - ./uploads:/app/uploads
-    restart: always
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
 
-  db:
-    image: postgres:14
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - NODE_ENV=development
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=resume_customizer_dev
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - SERVICE_URL=${SERVICE_URL}
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run worker
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=resume_customizer_dev
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=resume_customizer
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: always
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:
+  redis_data:
