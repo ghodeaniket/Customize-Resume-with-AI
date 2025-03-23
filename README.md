@@ -51,7 +51,9 @@ The application consists of a backend API and a frontend user interface:
 4. Update the `.env` file with your configuration values, especially:
    - Database credentials
    - Redis connection
-   - OpenRouter API key
+   - OpenRouter API key (sign up at https://openrouter.ai/ to get a key)
+
+   > **IMPORTANT**: Never commit your `.env` file or API keys to version control!
 
 5. Start the development server:
    ```
@@ -66,7 +68,7 @@ The application consists of a backend API and a frontend user interface:
 ### Running with Docker
 
 1. Make sure Docker and Docker Compose are installed
-2. Set your environment variables
+2. Set your environment variables in `.env` file
 3. Run:
    ```
    docker-compose up
