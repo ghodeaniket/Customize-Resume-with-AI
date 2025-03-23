@@ -102,7 +102,7 @@
           "resumeContent": {
             "type": "string",
             "description": "The content of the resume, either as plain text or base64-encoded file data",
-            "example": "John Doe\\nSoftware Engineer\\njohn.doe@example.com | (123) 456-7890\\n\\nEXPERIENCE\\n..."
+            "example": "John Doe\nSoftware Engineer\njohn.doe@example.com | (123) 456-7890\n\nEXPERIENCE\n..."
           },
           "jobDescription": {
             "type": "string",
