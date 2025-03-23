@@ -1,0 +1,33 @@
+Senior Software Engineer - Backend
+
+About the Role:
+We are looking for a Senior Software Engineer to join our backend team. You will be responsible for designing, building, and maintaining scalable and reliable backend services that power our web and mobile applications.
+
+Responsibilities:
+- Design, build, and maintain efficient, reusable, and reliable code
+- Integration of data storage solutions and third-party APIs
+- Collaborate with frontend developers and other team members
+- Identify bottlenecks and bugs, and devise solutions to address these issues
+- Help maintain code quality, organization, and automatization
+
+Requirements:
+- 3+ years of experience in backend development
+- Proficiency in Node.js and Express.js
+- Experience with database technologies (MongoDB, PostgreSQL)
+- Understanding of server-side templating languages
+- Knowledge of cloud services (AWS, GCP, or Azure)
+- Familiarity with continuous integration and deployment
+- Strong problem-solving skills and attention to detail
+- Excellent communication and teamwork skills
+
+Nice to Have:
+- Experience with microservices architecture
+- Knowledge of containerization (Docker, Kubernetes)
+- Experience with messaging queues (Kafka, RabbitMQ)
+- Understanding of security best practices
+
+Benefits:
+- Competitive salary and benefits package
+- Remote-friendly work environment
+- Professional development opportunities
+- Collaborative and innovative team culture

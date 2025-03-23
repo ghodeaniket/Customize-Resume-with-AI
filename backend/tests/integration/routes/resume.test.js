@@ -123,6 +123,30 @@ describe('Resume API Routes', () => {
       expect(response.body.status).to.equal('error');
       expect(response.body.message).to.include('Failed to submit');
     });
+    
+    it('should validate resumeFormat field', async () => {
+      // Make request with invalid format
+      const response = await request(app)
+        .post('/api/v1/resume/customize')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          resumeContent: 'John Doe\nSoftware Engineer',
+          jobDescription: 'We are looking for a Software Engineer',
+          resumeFormat: 'invalid-format' // Invalid format
+        })
+        .expect(400);
+      
+      // Verify response
+      expect(response.body.status).to.equal('error');
+      expect(response.body.message).to.include('Invalid request data');
+      expect(response.body.details).to.be.an('array');
+      
+      // Find the specific validation error
+      const formatError = response.body.details.find(
+        error => error.path.includes('resumeFormat')
+      );
+      expect(formatError).to.exist;
+    });
   });
   
   describe('GET /api/v1/resume/status/:jobId', () => {
@@ -166,6 +190,30 @@ describe('Resume API Routes', () => {
       expect(dbFindOneStub.calledOnce).to.be.true;
       expect(dbFindOneStub.firstCall.args[0].where.jobId).to.equal(testJobId);
       expect(dbFindOneStub.firstCall.args[0].where.userId).to.equal(mockUserId);
+    });
+    
+    it('should return processing status properly', async () => {
+      // Setup mock job data for processing status
+      const mockJob = {
+        jobId: testJobId,
+        status: 'processing',
+        createdAt: new Date()
+      };
+      
+      dbFindOneStub.resolves(mockJob);
+      
+      // Make request
+      const response = await request(app)
+        .get(`/api/v1/resume/status/${testJobId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      
+      // Verify response
+      expect(response.body.status).to.equal('success');
+      expect(response.body.data.jobId).to.equal(testJobId);
+      expect(response.body.data.status).to.equal('processing');
+      expect(response.body.data).to.not.have.property('result');
+      expect(response.body.data).to.not.have.property('completedAt');
     });
     
     it('should return 404 for non-existent job', async () => {
@@ -244,6 +292,7 @@ describe('Resume API Routes', () => {
       expect(response.body.data.pagination.total).to.equal(25);
       expect(response.body.data.pagination.page).to.equal(2);
       expect(response.body.data.pagination.limit).to.equal(10);
+      expect(response.body.data.pagination.totalPages).to.equal(3);
       
       // Verify database was called correctly
       expect(dbFindAndCountAllStub.calledOnce).to.be.true;
@@ -280,6 +329,35 @@ describe('Resume API Routes', () => {
       // Verify response
       expect(response.body.status).to.equal('error');
       expect(response.body.message).to.include('Failed to get job history');
+    });
+    
+    it('should handle invalid pagination parameters', async () => {
+      // Make request with invalid parameters
+      const response = await request(app)
+        .get('/api/v1/resume/history?page=invalid&limit=invalid')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200); // Should still work with defaults
+      
+      // Verify default pagination was used despite invalid input
+      expect(dbFindAndCountAllStub.firstCall.args[0].limit).to.equal(10);
+      expect(dbFindAndCountAllStub.firstCall.args[0].offset).to.equal(0);
+    });
+    
+    it('should handle empty result set', async () => {
+      // Setup empty history
+      dbFindAndCountAllStub.resolves({ count: 0, rows: [] });
+      
+      // Make request
+      const response = await request(app)
+        .get('/api/v1/resume/history')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      
+      // Verify response
+      expect(response.body.status).to.equal('success');
+      expect(response.body.data.jobs).to.be.an('array').that.is.empty;
+      expect(response.body.data.pagination.total).to.equal(0);
+      expect(response.body.data.pagination.totalPages).to.equal(0);
     });
   });
 });
