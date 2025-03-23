@@ -4,6 +4,8 @@ const router = express.Router();
 const { authenticateApiKey } = require('../middleware/auth');
 const rateLimiter = require('../middleware/rateLimit');
 const resumeController = require('../controllers/resumeController');
+const Validator = require('../utils/validator');
+const errorHandler = require('../utils/errorHandler');
 
 // Apply authentication middleware to all routes
 router.use(authenticateApiKey);
@@ -16,8 +18,21 @@ router.use(rateLimiter({
 }));
 
 // Resume customization routes
-router.post('/customize', resumeController.customizeResume);
-router.get('/status/:jobId', resumeController.getJobStatus);
+router.post(
+  '/customize', 
+  Validator.validateBody(Validator.schemas.resumeCustomization),
+  resumeController.customizeResume
+);
+
+router.get(
+  '/status/:jobId', 
+  Validator.validateParams(Validator.schemas.jobStatus),
+  resumeController.getJobStatus
+);
+
 router.get('/history', resumeController.getJobHistory);
+
+// Apply error handling middleware
+router.use(errorHandler.apiErrorMiddleware());
 
 module.exports = router;

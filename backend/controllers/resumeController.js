@@ -3,12 +3,15 @@ const { v4: uuidv4 } = require('uuid');
 const Queue = require('bull');
 const db = require('../models');
 const logger = require('../utils/logger');
+const config = require('../config/config');
+const errorHandler = require('../utils/errorHandler');
 
 // Initialize queue
 const resumeQueue = new Queue('resume-processing', {
   redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: process.env.REDIS_PORT || 6379
+    host: config.redis.host,
+    port: config.redis.port,
+    password: config.redis.password || undefined
   }
 });
 
@@ -16,33 +19,20 @@ const resumeQueue = new Queue('resume-processing', {
  * Submit a resume for customization
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
  */
-exports.customizeResume = async (req, res) => {
+exports.customizeResume = async (req, res, next) => {
   try {
+    // Get validated data from middleware
     const {
       resumeContent,
       jobDescription,
-      resumeFormat = 'text',
-      isJobDescriptionUrl = false,
+      resumeFormat,
+      isJobDescriptionUrl,
       profilerModel,
       researcherModel,
       strategistModel
-    } = req.body;
-
-    // Validate required fields
-    if (!resumeContent) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Resume content is required'
-      });
-    }
-
-    if (!jobDescription) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Job description is required'
-      });
-    }
+    } = req.validatedBody;
 
     // Get user ID from API key (set by auth middleware)
     const userId = req.user.userId;
@@ -70,11 +60,17 @@ exports.customizeResume = async (req, res) => {
       profilerModel,
       researcherModel,
       strategistModel
+    }, {
+      attempts: 3, // Retry up to 3 times
+      backoff: {
+        type: 'exponential',
+        delay: 5000 // Starting delay of 5 seconds
+      }
     });
 
     logger.info('Resume customization job submitted', { jobId: job.jobId, userId });
 
-    res.status(200).json({
+    res.status(201).json({
       status: 'success',
       message: 'Resume customization job submitted successfully',
       data: {
@@ -83,9 +79,23 @@ exports.customizeResume = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error submitting resume customization job', { error });
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to submit resume customization job'
+    
+    // Database errors require special handling
+    if (error.name === 'SequelizeValidationError') {
+      return next({
+        statusCode: 400,
+        message: 'Validation error',
+        details: error.errors.map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+    
+    next({
+      statusCode: 500,
+      message: 'Failed to submit resume customization job',
+      details: { error: error.message }
     });
   }
 };
@@ -94,10 +104,12 @@ exports.customizeResume = async (req, res) => {
  * Get status of a job
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
  */
-exports.getJobStatus = async (req, res) => {
+exports.getJobStatus = async (req, res, next) => {
   try {
-    const { jobId } = req.params;
+    // Get jobId from validated params
+    const { jobId } = req.validatedParams;
     const userId = req.user.userId;
 
     // Find job in database
@@ -109,9 +121,10 @@ exports.getJobStatus = async (req, res) => {
     });
 
     if (!job) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Job not found'
+      return next({
+        statusCode: 404,
+        message: 'Job not found',
+        details: { jobId }
       });
     }
 
@@ -138,10 +151,11 @@ exports.getJobStatus = async (req, res) => {
 
     res.status(200).json(response);
   } catch (error) {
-    logger.error('Error getting job status', { error });
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to get job status'
+    logger.error('Error getting job status', { error, jobId: req.params.jobId });
+    next({
+      statusCode: 500,
+      message: 'Failed to get job status',
+      details: { error: error.message }
     });
   }
 };
@@ -150,29 +164,45 @@ exports.getJobStatus = async (req, res) => {
  * Get job history for a user
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
  */
-exports.getJobHistory = async (req, res) => {
+exports.getJobHistory = async (req, res, next) => {
   try {
     const userId = req.user.userId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
-    // Find all jobs for user
-    const jobs = await db.Job.findAll({
+    // Find all jobs for user with pagination
+    const { count, rows: jobs } = await db.Job.findAndCountAll({
       where: { userId },
       order: [['createdAt', 'DESC']],
-      attributes: ['jobId', 'status', 'createdAt', 'completedAt']
+      limit,
+      offset,
+      attributes: ['jobId', 'status', 'createdAt', 'completedAt', 'resumeFormat']
     });
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(count / limit);
 
     res.status(200).json({
       status: 'success',
       data: {
-        jobs
+        jobs,
+        pagination: {
+          total: count,
+          page,
+          limit,
+          totalPages
+        }
       }
     });
   } catch (error) {
-    logger.error('Error getting job history', { error });
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to get job history'
+    logger.error('Error getting job history', { error, userId: req.user.userId });
+    next({
+      statusCode: 500,
+      message: 'Failed to get job history',
+      details: { error: error.message }
     });
   }
 };
