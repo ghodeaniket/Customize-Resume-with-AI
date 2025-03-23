@@ -23,7 +23,7 @@ module.exports = {
   
   // OpenRouter configuration
   openrouter: {
-    apiKey: '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', // ⬅️ Add your OpenRouter API key here
+    apiKey: process.env.OPENROUTER_API_KEY || '', // Using environment variable
     serviceUrl: process.env.SERVICE_URL || 'http://localhost:8080',
     defaultModels: {
       profiler: process.env.DEFAULT_PROFILER_MODEL || 'anthropic/claude-3-opus',
