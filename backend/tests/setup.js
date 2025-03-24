@@ -1,5 +1,7 @@
 // tests/setup.js
 // Setup file for mocha tests
+const mocha = require('mocha');
+const { before, after } = mocha;
 
 // Set test environment
 process.env.NODE_ENV = 'test';

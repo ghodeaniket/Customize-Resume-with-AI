@@ -1,102 +1,258 @@
 // utils/errorHandler.js
 const logger = require('./logger');
+const config = require('../config/config');
 
 /**
- * Centralized error handling utility
+ * Error types for better categorization
  */
-class ErrorHandler {
-  constructor() {
-    this.errors = [];
-    
-    // Set up external error monitoring in production
-    if (process.env.NODE_ENV === 'production') {
-      // Initialize error monitoring service like Sentry if needed
-      // this.initErrorMonitoring();
-    }
+const ErrorTypes = {
+  VALIDATION: 'ValidationError',
+  AUTHENTICATION: 'AuthenticationError',
+  AUTHORIZATION: 'AuthorizationError',
+  RESOURCE_NOT_FOUND: 'ResourceNotFoundError',
+  EXTERNAL_SERVICE: 'ExternalServiceError',
+  DATABASE: 'DatabaseError',
+  AI_SERVICE: 'AIServiceError',
+  JOB_PROCESSING: 'JobProcessingError',
+  FILE_PROCESSING: 'FileProcessingError',
+  RATE_LIMIT: 'RateLimitError',
+  INTERNAL: 'InternalServerError'
+};
+
+/**
+ * Base application error class
+ */
+class AppError extends Error {
+  constructor(message, type = ErrorTypes.INTERNAL, statusCode = 500, details = {}) {
+    super(message);
+    this.name = type;
+    this.statusCode = statusCode;
+    this.details = details;
+    this.timestamp = new Date();
+    Error.captureStackTrace(this, this.constructor);
   }
   
-  /**
-   * Capture and log an error with context
-   * @param {Error} error - The error object
-   * @param {Object} context - Additional context for the error
-   * @returns {Error} - The original error
-   */
-  captureError(error, context = {}) {
-    // Log the error
-    logger.error(error.message, {
-      stack: error.stack,
-      ...context
-    });
-    
-    // Store in memory for debugging
-    this.errors.push({
-      timestamp: new Date(),
-      message: error.message,
-      stack: error.stack,
-      context
-    });
-    
-    // Keep only the last 100 errors in memory
-    if (this.errors.length > 100) {
-      this.errors.shift();
-    }
-    
-    // Send to external service in production
-    if (process.env.NODE_ENV === 'production') {
-      // this.sendToMonitoringService(error, context);
-    }
-    
-    return error;
-  }
-  
-  /**
-   * Get recent errors for debugging
-   * @returns {Array} - Recent errors
-   */
-  getRecentErrors() {
-    return this.errors;
-  }
-  
-  /**
-   * Create an API error response
-   * @param {string} message - Error message
-   * @param {number} statusCode - HTTP status code
-   * @param {Object} details - Additional error details
-   * @returns {Object} - Formatted error response
-   */
-  createApiError(message, statusCode = 500, details = {}) {
+  toJSON() {
     return {
-      status: 'error',
-      message,
-      statusCode,
-      details: Object.keys(details).length > 0 ? details : undefined,
-      timestamp: new Date().toISOString()
-    };
-  }
-  
-  /**
-   * API error middleware for Express
-   */
-  apiErrorMiddleware() {
-    return (err, req, res, next) => {
-      const statusCode = err.statusCode || 500;
-      const message = err.message || 'Internal Server Error';
-      
-      // Log the error
-      this.captureError(err, { 
-        path: req.path, 
-        method: req.method,
-        body: req.body,
-        statusCode 
-      });
-      
-      // Send response to client
-      res.status(statusCode).json(
-        this.createApiError(message, statusCode, err.details)
-      );
+      error: this.name,
+      message: this.message,
+      statusCode: this.statusCode,
+      details: this.details,
+      timestamp: this.timestamp,
+      stack: config.app.environment === 'development' ? this.stack : undefined
     };
   }
 }
 
-// Export singleton instance
-module.exports = new ErrorHandler();
+/**
+ * Error handler middleware for Express
+ */
+function errorMiddleware(err, req, res, next) {
+  let error = err;
+  
+  // Convert non-AppError instances to AppError
+  if (!(err instanceof AppError)) {
+    // Handle Sequelize errors
+    if (err.name === 'SequelizeValidationError') {
+      error = new AppError(
+        'Validation error',
+        ErrorTypes.VALIDATION,
+        400,
+        { errors: err.errors.map(e => ({ field: e.path, message: e.message })) }
+      );
+    } else if (err.name === 'SequelizeUniqueConstraintError') {
+      error = new AppError(
+        'Unique constraint violation',
+        ErrorTypes.VALIDATION,
+        400,
+        { errors: err.errors.map(e => ({ field: e.path, message: e.message })) }
+      );
+    }
+    // Handle other common errors
+    else {
+      error = new AppError(
+        err.message || 'Internal server error',
+        ErrorTypes.INTERNAL,
+        err.statusCode || 500
+      );
+    }
+  }
+  
+  // Log the error
+  if (error.statusCode >= 500) {
+    logger.error('Server error', { 
+      error: error.toJSON(),
+      requestId: req.id,
+      url: req.originalUrl,
+      method: req.method
+    });
+  } else {
+    logger.warn('Client error', { 
+      error: error.toJSON(),
+      requestId: req.id,
+      url: req.originalUrl,
+      method: req.method
+    });
+  }
+  
+  // Send the response
+  res.status(error.statusCode).json({
+    status: 'error',
+    message: error.message,
+    code: error.statusCode,
+    error: error.name,
+    details: error.details,
+    requestId: req.id,
+    timestamp: error.timestamp
+  });
+}
+
+/**
+ * Capture and process errors in workers and background jobs
+ */
+function captureError(error, context = {}) {
+  // Categorize the error if possible
+  let errorType = ErrorTypes.INTERNAL;
+  let statusCode = 500;
+  
+  if (error.name === 'AxiosError') {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      errorType = ErrorTypes.AUTHENTICATION;
+      statusCode = error.response.status;
+    } else if (error.response?.status === 404) {
+      errorType = ErrorTypes.RESOURCE_NOT_FOUND;
+      statusCode = 404;
+    } else if (error.response?.status === 429) {
+      errorType = ErrorTypes.RATE_LIMIT;
+      statusCode = 429;
+    } else {
+      errorType = ErrorTypes.EXTERNAL_SERVICE;
+      statusCode = error.response?.status || 500;
+    }
+  } else if (error.message?.includes('database') || error.name?.includes('Sequelize')) {
+    errorType = ErrorTypes.DATABASE;
+  } else if (error.message?.includes('job') || error.message?.includes('queue')) {
+    errorType = ErrorTypes.JOB_PROCESSING;
+  } else if (error.message?.includes('parse') || error.message?.includes('file')) {
+    errorType = ErrorTypes.FILE_PROCESSING;
+  } else if (error.message?.includes('AI') || error.message?.includes('model')) {
+    errorType = ErrorTypes.AI_SERVICE;
+  }
+  
+  // Create a standardized error
+  const appError = new AppError(
+    error.message,
+    errorType,
+    statusCode,
+    {
+      originalError: {
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        response: error.response?.data
+      },
+      context
+    }
+  );
+  
+  // Log the error with context
+  logger.error('Error captured', {
+    error: appError.toJSON(),
+    context
+  });
+  
+  // Return the processed error
+  return appError;
+}
+
+/**
+ * Create common error instances
+ */
+function createErrors() {
+  return {
+    validationError: (message, details) => new AppError(
+      message || 'Validation error',
+      ErrorTypes.VALIDATION,
+      400,
+      details
+    ),
+    
+    authenticationError: (message, details) => new AppError(
+      message || 'Authentication failed',
+      ErrorTypes.AUTHENTICATION,
+      401,
+      details
+    ),
+    
+    authorizationError: (message, details) => new AppError(
+      message || 'Not authorized',
+      ErrorTypes.AUTHORIZATION,
+      403,
+      details
+    ),
+    
+    notFoundError: (message, details) => new AppError(
+      message || 'Resource not found',
+      ErrorTypes.RESOURCE_NOT_FOUND,
+      404,
+      details
+    ),
+    
+    externalServiceError: (message, details) => new AppError(
+      message || 'External service error',
+      ErrorTypes.EXTERNAL_SERVICE,
+      502,
+      details
+    ),
+    
+    databaseError: (message, details) => new AppError(
+      message || 'Database operation failed',
+      ErrorTypes.DATABASE,
+      500,
+      details
+    ),
+    
+    aiServiceError: (message, details) => new AppError(
+      message || 'AI service error',
+      ErrorTypes.AI_SERVICE,
+      502,
+      details
+    ),
+    
+    jobProcessingError: (message, details) => new AppError(
+      message || 'Job processing failed',
+      ErrorTypes.JOB_PROCESSING,
+      500,
+      details
+    ),
+    
+    fileProcessingError: (message, details) => new AppError(
+      message || 'File processing failed',
+      ErrorTypes.FILE_PROCESSING,
+      400,
+      details
+    ),
+    
+    rateLimitError: (message, details) => new AppError(
+      message || 'Rate limit exceeded',
+      ErrorTypes.RATE_LIMIT,
+      429,
+      details
+    ),
+    
+    internalError: (message, details) => new AppError(
+      message || 'Internal server error',
+      ErrorTypes.INTERNAL,
+      500,
+      details
+    )
+  };
+}
+
+module.exports = {
+  AppError,
+  ErrorTypes,
+  errorMiddleware,
+  captureError,
+  errors: createErrors()
+};

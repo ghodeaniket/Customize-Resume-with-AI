@@ -37,6 +37,6 @@ router.get(
 );
 
 // Apply error handling middleware
-router.use(errorHandler.apiErrorMiddleware());
+router.use(errorHandler.errorMiddleware);
 
 module.exports = router;

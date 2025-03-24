@@ -1,18 +1,58 @@
-FROM node:18-alpine
+FROM node:18-alpine AS base
 
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Add Tini for better process handling
+RUN apk add --no-cache tini
+
+# Install production dependencies first (layer caching optimization)
+FROM base AS deps
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Build stage for development dependencies
+FROM deps AS dev-deps
+RUN npm ci
+
+# Final stage
+FROM base
+
+# Set environment variables
+ENV NODE_ENV=production
+
+# Copy package files 
 COPY package*.json ./
 
-# Install all dependencies including dev dependencies
-RUN npm install
+# Copy dependences from deps stage
+COPY --from=deps /usr/src/app/node_modules ./node_modules
 
 # Copy app source code
 COPY . .
 
+# Create log directory with proper permissions
+RUN mkdir -p logs && \
+    chown -R node:node logs
+
+# Create upload directory with proper permissions
+RUN mkdir -p uploads && \
+    chown -R node:node uploads
+
+# Set timezone
+ENV TZ=UTC
+
+# Run migrations
+RUN echo "#!/bin/sh\nif [ \"$NODE_ENV\" = \"production\" ]; then\n  npm run migrate:prod\nelse\n  npm run migrate:dev\nfi\n\nexec \"\$@\"" > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+# Switch to non-root user
+USER node
+
 # Expose API port
 EXPOSE 3000
+
+# Use tini as entrypoint
+ENTRYPOINT ["/sbin/tini", "--", "/entrypoint.sh"]
 
 # Start the application
 CMD ["node", "server.js"]

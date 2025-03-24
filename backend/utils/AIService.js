@@ -1,6 +1,9 @@
 // utils/AIService.js
 const logger = require('./logger');
 const { loadPromptTemplate, getOptimizationConfig } = require('./promptManager');
+const { openrouterClient } = require('./apiUtils');
+const errorHandler = require('./errorHandler');
+const config = require('../config/config');
 
 /**
  * Service for handling AI-related interactions
@@ -8,10 +11,11 @@ const { loadPromptTemplate, getOptimizationConfig } = require('./promptManager')
 class AIService {
   /**
    * Initialize the AI service with an API client
-   * @param {Object} aiClient - Axios instance configured for the AI API
+   * @param {Object} aiClient - API client for AI service (optional)
    */
-  constructor(aiClient) {
-    this.aiClient = aiClient;
+  constructor(aiClient = null) {
+    // Use provided client or default to openrouterClient from apiUtils
+    this.aiClient = aiClient || openrouterClient;
   }
   
   /**
@@ -33,7 +37,9 @@ class AIService {
       };
       
       const profilerPrompt = await loadPromptTemplate('profiler', promptOptions);
-      const model = options.profilerModel || process.env.DEFAULT_PROFILER_MODEL || 'anthropic/claude-3-opus';
+      const model = options.profilerModel || 
+                   config.defaultModels?.profiler || 
+                   'anthropic/claude-3-opus';
       
       const requestOptions = {
         temperature: options.temperature || config.temperature || 0.7,
@@ -43,7 +49,12 @@ class AIService {
       return await this.makeRequest(model, profilerPrompt, resumeContent, requestOptions);
     } catch (error) {
       logger.error('Profile generation failed', { error });
-      throw new Error(`Failed to generate profile: ${error.message}`);
+      
+      // Throw specific AI error
+      throw errorHandler.errors.aiServiceError(
+        `Failed to generate profile: ${error.message}`,
+        { stage: 'profiler', originalError: error }
+      );
     }
   }
   
@@ -66,7 +77,9 @@ class AIService {
       };
       
       const researcherPrompt = await loadPromptTemplate('researcher', promptOptions);
-      const model = options.researcherModel || process.env.DEFAULT_RESEARCHER_MODEL || 'anthropic/claude-3-opus';
+      const model = options.researcherModel || 
+                    config.defaultModels?.researcher || 
+                    'anthropic/claude-3-opus';
       
       const requestOptions = {
         temperature: options.temperature || config.temperature || 0.7,
@@ -76,7 +89,12 @@ class AIService {
       return await this.makeRequest(model, researcherPrompt, jobDescription, requestOptions);
     } catch (error) {
       logger.error('Job description analysis failed', { error });
-      throw new Error(`Failed to analyze job description: ${error.message}`);
+      
+      // Throw specific AI error
+      throw errorHandler.errors.aiServiceError(
+        `Failed to analyze job description: ${error.message}`,
+        { stage: 'researcher', originalError: error }
+      );
     }
   }
   
@@ -107,7 +125,9 @@ class AIService {
       const strategistPrompt = await loadPromptTemplate('resumeStrategist', promptOptions);
       
       // Use Claude 3 Opus for the strategist model as it has the most comprehensive reasoning capabilities
-      const model = options.strategistModel || process.env.DEFAULT_STRATEGIST_MODEL || 'anthropic/claude-3-opus';
+      const model = options.strategistModel || 
+                    config.defaultModels?.strategist || 
+                    'anthropic/claude-3-opus';
       
       // Improved context format with factual information for verification
       const content = `
@@ -142,7 +162,12 @@ Based on the above information, create a customized resume that highlights relev
       return verifiedResume;
     } catch (error) {
       logger.error('Resume customization failed', { error });
-      throw new Error(`Failed to generate customized resume: ${error.message}`);
+      
+      // Throw specific AI error
+      throw errorHandler.errors.aiServiceError(
+        `Failed to generate customized resume: ${error.message}`,
+        { stage: 'strategist', originalError: error }
+      );
     }
   }
   
@@ -167,7 +192,7 @@ Extract only factual information from this resume. Include:
 Format as a JSON object with clear categorization.
 `;
       
-      const model = 'anthropic/claude-3-haiku'; // Fast, efficient model for extraction
+      const model = config.defaultModels?.factChecker || 'anthropic/claude-3-haiku'; // Fast, efficient model for extraction
       const extractionResponse = await this.makeRequest(model, extractionPrompt, resumeContent, {
         temperature: 0.1 // Very low temperature for factual extraction
       });
@@ -223,7 +248,7 @@ ${generatedResume}
 ###
 `;
       
-      const model = 'anthropic/claude-3-7-sonnet'; // Using a strong model for verification
+      const model = config.defaultModels?.factChecker || 'anthropic/claude-3-sonnet'; // Using a strong model for verification
       const verificationResponse = await this.makeRequest(model, verificationPrompt, "", {
         temperature: 0.2 // Low temperature for accuracy
       });
@@ -246,6 +271,7 @@ ${generatedResume}
    */
   async makeRequest(model, prompt, content, options = {}) {
     try {
+      // Use our enhanced API client with retries and circuit breaking
       const response = await this.aiClient.post('/chat/completions', {
         model,
         messages: [
@@ -256,25 +282,10 @@ ${generatedResume}
         max_tokens: options.max_tokens || 2000
       });
       
-      return response.data.choices[0].message.content;
+      // Extract the content from the response
+      return response.choices[0].message.content;
     } catch (error) {
-      const statusCode = error.response?.status;
-      const responseData = error.response?.data;
-      
-      logger.error('AI request failed', { 
-        model, 
-        statusCode,
-        error: error.message,
-        response: responseData 
-      });
-      
-      if (statusCode === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
-      } else if (statusCode === 401 || statusCode === 403) {
-        throw new Error('Authentication failed. Please check your API key.');
-      }
-      
-      throw new Error(`AI processing failed: ${error.message}`);
+      throw error; // Let error handling happen at the caller level
     }
   }
 }

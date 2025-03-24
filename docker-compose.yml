@@ -1,4 +1,29 @@
+version: '3.8'
+
 services:
+  # Frontend Next.js application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    env_file:
+      - ./.env
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8080
+    networks:
+      - resume-network
+    restart: unless-stopped
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API service
   api:
     build:
       context: ./backend
@@ -6,47 +31,185 @@ services:
     ports:
       - "8080:3000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=resume_customizer
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
-      - ./backend:/usr/src/app
-      - /usr/src/app/node_modules
-    command: npm run dev
+      - api_logs:/usr/src/app/logs
+    networks:
+      - resume-network
+    restart: unless-stopped
+    command: npm run start
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:3000/api/v1/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  worker:
+  # Resume processing worker
+  resume-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=resume_customizer
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
-      - ./backend:/usr/src/app
-      - /usr/src/app/node_modules
-    command: npm run worker
+      - worker_logs:/usr/src/app/logs
+    networks:
+      - resume-network
+    restart: unless-stopped
+    command: node worker.js
+    deploy:
+      replicas: 2  # Run multiple worker instances for processing
 
+  # Formatted resume worker
+  formatted-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=resume_customizer
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - worker_logs:/usr/src/app/logs
+    networks:
+      - resume-network
+    restart: unless-stopped
+    command: node workers/formattedResumeProcessor.js
+    deploy:
+      replicas: 1  # One instance is enough for formatted resume generation
+
+  # PostgreSQL database
   postgres:
     image: postgres:16-alpine
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_USER=postgres
-      - POSTGRES_DB=resume_customizer_dev
+      - POSTGRES_DB=resume_customizer
     ports:
-      - "5434:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - resume-network
+    restart: unless-stopped
+    healthcheck:
+      test: pg_isready -U postgres -d resume_customizer
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Redis for job queue and caching
   redis:
     image: redis:alpine
     ports:
-      - "6381:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - resume-network
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping | grep PONG
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy volatile-lru
+
+  # Nginx for SSL termination and reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - resume-network
+    restart: unless-stopped
+
+  # Monitoring with Prometheus and Grafana (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - resume-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3001:3000"
+    networks:
+      - resume-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+networks:
+  resume-network:
+    driver: bridge
 
 volumes:
   postgres_data:
   redis_data:
+  api_logs:
+  worker_logs:
+  prometheus_data:
+  grafana_data:

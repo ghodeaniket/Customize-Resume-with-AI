@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'resume-api'
+    metrics_path: '/api/v1/metrics'
+    static_configs:
+      - targets: ['api:3000']
+
+  - job_name: 'resume-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['resume-worker:3001']
+      
+  - job_name: 'formatted-worker'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['formatted-worker:3002']
+      
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
