@@ -49,9 +49,24 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    outputFormat: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'text'
+    },
+    preserveOriginalFormat: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false 
+    },
     result: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    resultMimeType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'text/plain'
     },
     error: {
       type: DataTypes.TEXT,
