@@ -28,7 +28,8 @@ class AIService {
       
       const promptOptions = {
         useEnhanced: config.useEnhanced,
-        promptSuffix: options.promptSuffix || config.promptSuffix
+        promptSuffix: options.promptSuffix || config.promptSuffix,
+        useCache: true
       };
       
       const profilerPrompt = await loadPromptTemplate('profiler', promptOptions);
@@ -60,7 +61,8 @@ class AIService {
       
       const promptOptions = {
         useEnhanced: config.useEnhanced,
-        promptSuffix: options.promptSuffix || config.promptSuffix
+        promptSuffix: options.promptSuffix || config.promptSuffix,
+        useCache: true
       };
       
       const researcherPrompt = await loadPromptTemplate('researcher', promptOptions);
@@ -88,19 +90,26 @@ class AIService {
    */
   async generateCustomizedResume(profileContent, researchContent, originalResume, options = {}) {
     try {
+      // Extract key factual information from the original resume for verification
+      const factualInfo = await this.extractFactualInformation(originalResume);
+      
       // Get configuration based on optimization preset
       const optimizationPreset = options.optimizationPreset || 'default';
       const config = getOptimizationConfig(optimizationPreset);
       
       const promptOptions = {
         useEnhanced: config.useEnhanced,
-        promptSuffix: options.promptSuffix || config.promptSuffix
+        promptSuffix: options.promptSuffix || config.promptSuffix,
+        useCache: true
       };
       
+      // Load the enhanced strategist prompt
       const strategistPrompt = await loadPromptTemplate('resumeStrategist', promptOptions);
+      
+      // Use Claude 3 Opus for the strategist model as it has the most comprehensive reasoning capabilities
       const model = options.strategistModel || process.env.DEFAULT_STRATEGIST_MODEL || 'anthropic/claude-3-opus';
       
-      // Improved context format
+      // Improved context format with factual information for verification
       const content = `
 # Professional Profile Analysis
 ${profileContent}
@@ -111,18 +120,119 @@ ${researchContent}
 # Original Resume
 ${originalResume}
 
+# Factual Information to Preserve Exactly
+${JSON.stringify(factualInfo)}
+
+IMPORTANT: Ensure all factual information (company names, job titles, dates, education details) 
+exactly matches the original resume. Do not invent or modify any employment history, education credentials, 
+or dates. Only enhance descriptions, achievements, and skills based on the job requirements.
+
 Based on the above information, create a customized resume that highlights relevant skills and experiences for this specific job.
-      `;
+`;
       
-      const requestOptions = {
-        temperature: options.temperature || config.temperature || 0.7,
+      // Generate the customized resume
+      const customizedResume = await this.makeRequest(model, strategistPrompt, content, {
+        temperature: options.temperature || config.temperature || 0.3,  // Lower temperature for more factual accuracy
         max_tokens: options.max_tokens || config.strategistMaxTokens || 3000
-      };
+      });
       
-      return await this.makeRequest(model, strategistPrompt, content, requestOptions);
+      // Verify factual information in the generated resume
+      const verifiedResume = await this.verifyFactualInformation(customizedResume, factualInfo);
+      
+      return verifiedResume;
     } catch (error) {
       logger.error('Resume customization failed', { error });
       throw new Error(`Failed to generate customized resume: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Extract key factual information from the original resume
+   * @param {string} resumeContent - Original resume content
+   * @returns {Promise<Object>} - Factual information extracted from the resume
+   */
+  async extractFactualInformation(resumeContent) {
+    try {
+      const extractionPrompt = await loadPromptTemplate('fact-extractor') || `
+Extract only factual information from this resume. Include:
+1. Full name
+2. Contact information (email, phone)
+3. Company names with exact spellings
+4. Job titles
+5. Employment dates
+6. Education institutions
+7. Degrees and certifications with completion dates
+8. Technical skills and tools (only confirmed ones, not aspirational)
+
+Format as a JSON object with clear categorization.
+`;
+      
+      const model = 'anthropic/claude-3-haiku'; // Fast, efficient model for extraction
+      const extractionResponse = await this.makeRequest(model, extractionPrompt, resumeContent, {
+        temperature: 0.1 // Very low temperature for factual extraction
+      });
+      
+      // Try to parse as JSON, but handle text response if JSON parsing fails
+      try {
+        return JSON.parse(extractionResponse);
+      } catch (e) {
+        logger.warn('Fact extraction returned non-JSON response', { error: e });
+        // Return as a string if JSON parsing fails
+        return { rawFactualData: extractionResponse };
+      }
+    } catch (error) {
+      logger.error('Fact extraction failed', { error });
+      // Return empty object but don't fail the overall process
+      return {};
+    }
+  }
+  
+  /**
+   * Verify factual information in the generated resume
+   * @param {string} generatedResume - Generated resume content
+   * @param {Object} factualInfo - Original factual information
+   * @returns {Promise<string>} - Verified and corrected resume
+   */
+  async verifyFactualInformation(generatedResume, factualInfo) {
+    try {
+      // If fact extraction failed or returned empty, just return the generated resume
+      if (!factualInfo || Object.keys(factualInfo).length === 0) {
+        return generatedResume;
+      }
+      
+      const verificationPrompt = await loadPromptTemplate('fact-verifier') || `
+You are a fact-checking system for resumes. Compare the generated resume with the original factual information.
+Correct any discrepancies in:
+1. Names, dates, and contact information
+2. Company names and their spelling
+3. Job titles
+4. Employment dates and durations
+5. Education credentials and dates
+6. Certification names and dates
+
+Make surgical corrections only where facts are wrong. Do not change the improved descriptions or formatting.
+
+Original factual information:
+###
+${JSON.stringify(factualInfo)}
+###
+
+Generated resume:
+###
+${generatedResume}
+###
+`;
+      
+      const model = 'anthropic/claude-3-7-sonnet'; // Using a strong model for verification
+      const verificationResponse = await this.makeRequest(model, verificationPrompt, "", {
+        temperature: 0.2 // Low temperature for accuracy
+      });
+      
+      return verificationResponse;
+    } catch (error) {
+      logger.error('Resume verification failed', { error });
+      // In case of failure, return the original generated resume
+      return generatedResume;
     }
   }
   

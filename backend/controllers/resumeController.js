@@ -28,10 +28,14 @@ exports.customizeResume = async (req, res, next) => {
       resumeContent,
       jobDescription,
       resumeFormat,
+      outputFormat,
+      preserveOriginalFormat,
       isJobDescriptionUrl,
       profilerModel,
       researcherModel,
-      strategistModel
+      strategistModel,
+      markdownModel,
+      htmlModel
     } = req.validatedBody;
 
     // Get user ID from API key (set by auth middleware)
@@ -43,6 +47,8 @@ exports.customizeResume = async (req, res, next) => {
       userId,
       status: 'pending',
       resumeFormat,
+      outputFormat,
+      preserveOriginalFormat,
       isJobDescriptionUrl,
       profilerModel,
       researcherModel,
@@ -56,10 +62,14 @@ exports.customizeResume = async (req, res, next) => {
       resumeContent,
       jobDescription,
       resumeFormat,
+      outputFormat,
+      preserveOriginalFormat,
       isJobDescriptionUrl,
       profilerModel,
       researcherModel,
-      strategistModel
+      strategistModel,
+      markdownModel,
+      htmlModel
     }, {
       attempts: 3, // Retry up to 3 times
       backoff: {
@@ -142,6 +152,14 @@ exports.getJobStatus = async (req, res, next) => {
     if (job.status === 'completed') {
       response.data.result = job.result;
       response.data.completedAt = job.completedAt;
+      response.data.resultMimeType = job.resultMimeType || 'text/plain';
+      response.data.outputFormat = job.outputFormat || 'text';
+      
+      // For non-text results, include base64 flag for binary data
+      if (job.resultMimeType && job.resultMimeType !== 'text/plain' && 
+          job.resultMimeType !== 'text/markdown' && job.resultMimeType !== 'text/html') {
+        response.data.isBase64 = true;
+      }
     }
 
     // Add error if job failed

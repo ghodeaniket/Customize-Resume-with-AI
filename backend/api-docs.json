@@ -89,6 +89,22 @@
             "type": "string",
             "example": "Customized resume content"
           },
+          "resultMimeType": {
+            "type": "string",
+            "example": "text/plain",
+            "description": "MIME type of the result content"
+          },
+          "outputFormat": {
+            "type": "string",
+            "enum": ["text", "markdown", "html", "pdf"],
+            "example": "text",
+            "description": "Format of the output result"
+          },
+          "isBase64": {
+            "type": "boolean",
+            "example": false,
+            "description": "Whether the result is base64-encoded (for binary formats like PDF)"
+          },
           "error": {
             "type": "string",
             "example": "Error message if job failed"
@@ -102,7 +118,7 @@
           "resumeContent": {
             "type": "string",
             "description": "The content of the resume, either as plain text or base64-encoded file data",
-            "example": "John Doe\\nSoftware Engineer\\njohn.doe@example.com | (123) 456-7890\\n\\nEXPERIENCE\\n..."
+            "example": "John Doe\nSoftware Engineer\njohn.doe@example.com | (123) 456-7890\n\nEXPERIENCE\n..."
           },
           "jobDescription": {
             "type": "string",
@@ -115,6 +131,17 @@
             "default": "text",
             "description": "Format of the resume content"
           },
+          "outputFormat": {
+            "type": "string",
+            "enum": ["text", "markdown", "html", "pdf"],
+            "default": "text",
+            "description": "Format to output the customized resume in"
+          },
+          "preserveOriginalFormat": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to try to preserve the original resume format (if PDF)"
+          },
           "isJobDescriptionUrl": {
             "type": "boolean",
             "default": false,
@@ -123,17 +150,27 @@
           "profilerModel": {
             "type": "string",
             "description": "OpenRouter model ID for the profile generation step",
-            "example": "anthropic/claude-3-opus"
+            "example": "anthropic/claude-3-7-sonnet"
           },
           "researcherModel": {
             "type": "string",
             "description": "OpenRouter model ID for the job description analysis step",
-            "example": "anthropic/claude-3-opus"
+            "example": "anthropic/claude-3-7-sonnet"
           },
           "strategistModel": {
             "type": "string",
             "description": "OpenRouter model ID for the resume customization step",
             "example": "anthropic/claude-3-opus"
+          },
+          "markdownModel": {
+            "type": "string",
+            "description": "Model for markdown formatting (if markdown output format is selected)",
+            "example": "anthropic/claude-3-haiku"
+          },
+          "htmlModel": {
+            "type": "string",
+            "description": "Model for HTML formatting (if HTML output format is selected)",
+            "example": "anthropic/claude-3-haiku"
           }
         }
       }

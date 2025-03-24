@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Customizer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      margin-bottom: 20px;
+      background-color: white;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 5px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 15px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
+    .upload-icon {
+      font-size: 40px;
+      color: #ccc;
+      margin-bottom: 10px;
+    }
+    .debug-console {
+      font-family: monospace;
+      background-color: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+      height: 300px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    .console-line {
+      margin: 0;
+      padding: 2px 0;
+    }
+    .console-time {
+      color: #666;
+    }
+    .console-info {
+      color: #0066cc;
+    }
+    .console-error {
+      color: #cc0000;
+    }
+    .console-success {
+      color: #00aa00;
+    }
+    .upload-button {
+      display: inline-block;
+      cursor: pointer;
+      color: #4169e1;
+      text-decoration: underline;
+    }
+    .selected-file {
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .customize-button {
+      background-color: #4169e1;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .customize-button:hover {
+      background-color: #3253c1;
+    }
+    .json {
+      color: #333;
+    }
+    .json-key {
+      color: #0d6efd;
+    }
+    .json-string {
+      color: #198754;
+    }
+    .json-number {
+      color: #fd7e14;
+    }
+    .download-button {
+      display: inline-block;
+      margin-top: 20px;
+      background-color: #28a745;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+    .download-button:hover {
+      background-color: #218838;
+      text-decoration: none;
+      color: white;
+    }
+    #downloadContainer {
+      text-align: center;
+      margin-top: 20px;
+      display: none;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Resume Customizer</h1>
+    <p class="subtitle">Upload your resume and we'll tailor it for your target job</p>
+    
+    <div class="card">
+      <div class="mb-3">
+        <label for="apiKey" class="form-label">API Key</label>
+        <input type="text" class="form-control" id="apiKey" value="demo-api-key-55902034-f169-4a9d-a4a1-c205a96ba56f">
+        <div class="form-text">Demo key is pre-filled for testing</div>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Resume (PDF format)</label>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📄</div>
+          <span class="upload-button" id="uploadButton">Upload a file</span> or drag and drop
+          <div class="mt-2 text-muted">PDF up to 10MB</div>
+          <input type="file" id="resumeFile" accept=".pdf" style="display: none;">
+        </div>
+        <div class="selected-file" id="selectedFile"></div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="jobDescription" class="form-label">Job Description</label>
+        <div class="text-end mb-1">
+          <a href="#" id="loadSampleJob">Load sample job description</a>
+        </div>
+        <textarea class="form-control" id="jobDescription" rows="8" placeholder="Paste job description here..."></textarea>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Formatting Options</label>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="templateStyle" class="form-label">Template Style</label>
+            <select class="form-select" id="templateStyle">
+              <option value="modern">Modern</option>
+              <option value="classic">Classic</option>
+              <option value="professional">Professional</option>
+              <option value="creative">Creative</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="primaryColor" class="form-label">Primary Color</label>
+            <input type="color" class="form-control form-control-color w-100" id="primaryColor" value="#4169e1">
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-center">
+        <button class="customize-button" id="customizeButton">Customize Resume</button>
+      </div>
+      
+      <!-- Download container - initially hidden -->
+      <div id="downloadContainer">
+        <div class="alert alert-success" role="alert">
+          <h4 class="alert-heading">Customization Complete!</h4>
+          <p>Your resume has been customized to match the job description.</p>
+        </div>
+        <a href="#" class="download-button" id="downloadButton">
+          <i class="fas fa-download"></i> Download Customized Resume
+        </a>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h3>Debug Console</h3>
+      <div class="debug-console" id="debugConsole"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // References to DOM elements
+      const apiKeyInput = document.getElementById('apiKey');
+      const uploadArea = document.getElementById('uploadArea');
+      const uploadButton = document.getElementById('uploadButton');
+      const resumeFileInput = document.getElementById('resumeFile');
+      const selectedFileDiv = document.getElementById('selectedFile');
+      const jobDescriptionTextarea = document.getElementById('jobDescription');
+      const loadSampleJobLink = document.getElementById('loadSampleJob');
+      const templateStyleSelect = document.getElementById('templateStyle');
+      const primaryColorInput = document.getElementById('primaryColor');
+      const customizeButton = document.getElementById('customizeButton');
+      const debugConsole = document.getElementById('debugConsole');
+      const downloadContainer = document.getElementById('downloadContainer');
+      const downloadButton = document.getElementById('downloadButton');
+      
+      // Track selected file
+      let selectedFileObj = null;
+      
+      // Sample job description
+      const sampleJobDescription = `Senior Software Engineering Manager
+
+About Us:
+We are a growing tech company building innovative solutions using cutting-edge technologies. Our engineering team is passionate about creating scalable, maintainable software that solves real-world problems.
+
+Job Description:
+We are looking for an experienced Engineering Manager to lead a team of talented software engineers. The ideal candidate will have a strong technical background, excellent leadership skills, and a track record of delivering high-quality software products.
+
+Responsibilities:
+• Lead and mentor a team of 5-8 software engineers
+• Work closely with product managers to define and prioritize features
+• Drive technical decision-making and architecture planning
+• Establish engineering best practices and coding standards
+• Ensure on-time delivery of high-quality software
+• Conduct performance reviews and foster career growth for team members
+• Participate in technical discussions and code reviews
+• Collaborate with other engineering teams to ensure system integration
+
+Requirements:
+• 5+ years of experience in software engineering
+• 3+ years of experience in a technical leadership role
+• Strong programming skills in at least one modern language (Java, Python, Go, etc.)
+• Experience with modern software development practices (Agile, CI/CD, TDD)
+• Excellent communication and interpersonal skills
+• Bachelor's degree in Computer Science or related field (or equivalent experience)
+• Ability to balance technical leadership and people management responsibilities
+
+Nice to Have:
+• Experience with cloud platforms (AWS, GCP, Azure)
+• Background in distributed systems and microservices architecture
+• Experience with containerization technologies (Docker, Kubernetes)
+• Previous experience in a fast-paced startup environment
+
+Benefits:
+• Competitive salary and equity package
+• Health, dental, and vision insurance
+• 401(k) matching
+• Flexible working hours and remote work options
+• Professional development budget
+• Team events and company retreats`;
+      
+      // Display message in the debug console
+      function logToConsole(message, type = 'info') {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const logEntry = document.createElement('p');
+        logEntry.className = 'console-line';
+        
+        if (message.startsWith('{') || message.startsWith('[')) {
+          try {
+            // Format JSON with syntax highlighting
+            const jsonObj = JSON.parse(message);
+            const formatted = formatJSON(jsonObj);
+            logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${formatted}</span>`;
+          } catch (e) {
+            // If not valid JSON, display as plain text
+            logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${message}</span>`;
+          }
+        } else {
+          logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${message}</span>`;
+        }
+        
+        debugConsole.appendChild(logEntry);
+        debugConsole.scrollTop = debugConsole.scrollHeight;
+      }
+      
+      // Format JSON with syntax highlighting
+      function formatJSON(obj) {
+        return JSON.stringify(obj, null, 2)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            let cls = 'json-number';
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                cls = 'json-key';
+                match = match.replace(/"(.*)":/g, '<b>"$1"</b>:');
+              } else {
+                cls = 'json-string';
+              }
+            } else if (/true|false/.test(match)) {
+              cls = 'json-boolean';
+            } else if (/null/.test(match)) {
+              cls = 'json-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+          })
+          .replace(/\n/g, '<br>')
+          .replace(/\s{2}/g, '&nbsp;&nbsp;');
+      }
+      
+      // Handle file upload button click
+      uploadButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        resumeFileInput.click();
+      });
+      
+      // Handle file upload area click
+      uploadArea.addEventListener('click', function(e) {
+        if (e.target !== uploadButton) {
+          resumeFileInput.click();
+        }
+      });
+      
+      // Handle file drag and drop
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        uploadArea.style.borderColor = '#4169e1';
+        uploadArea.style.backgroundColor = '#f0f8ff';
+      }
+      
+      function unhighlight() {
+        uploadArea.style.borderColor = '#ddd';
+        uploadArea.style.backgroundColor = '#f9f9f9';
+      }
+      
+      // Handle file drop
+      uploadArea.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+          handleFile(files[0]);
+          
+          // Set the file input value for form submission
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(files[0]);
+          resumeFileInput.files = dataTransfer.files;
+        }
+      }, false);
+      
+      // Handle file input change
+      resumeFileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+          handleFile(this.files[0]);
+        }
+      });
+      
+      function handleFile(file) {
+        selectedFileObj = file;
+        
+        if (file.type !== 'application/pdf') {
+          logToConsole('Only PDF files are supported', 'error');
+          return;
+        }
+        
+        if (file.size > 10 * 1024 * 1024) { // 10MB
+          logToConsole('File size exceeds 10MB limit', 'error');
+          return;
+        }
+        
+        selectedFileDiv.textContent = `Selected file: ${file.name}`;
+        logToConsole(`File selected: ${file.name} (${formatFileSize(file.size)})`, 'info');
+      }
+      
+      function formatFileSize(bytes) {
+        if (bytes < 1024) {
+          return bytes + ' bytes';
+        } else if (bytes < 1024 * 1024) {
+          return (bytes / 1024).toFixed(2) + ' KB';
+        } else {
+          return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+      }
+      
+      // Load sample job description
+      loadSampleJobLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        jobDescriptionTextarea.value = sampleJobDescription;
+        logToConsole('Sample job description loaded', 'info');
+      });
+      
+      // Generate a unique filename
+      function generateCustomizedFilename() {
+        if (!selectedFileObj) return 'customized-resume.pdf';
+        
+        const originalName = selectedFileObj.name;
+        const baseName = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+        return `${baseName}-customized-${Date.now().toString().substr(-6)}.pdf`;
+      }
+      
+      // Set up the download button with a simulated PDF
+      function setupDownloadButton() {
+        const filename = generateCustomizedFilename();
+        
+        // In a real implementation, this would be the actual URL from the API
+        // For demo purposes, we're creating a data URL with a small PDF
+        const dummyPdfData = 'data:application/pdf;base64,JVBERi0xLjcKJeLjz9MKNSAwIG9iago8PAovVHlwZSAvWE9iamVjdAovU3VidHlwZSAvSW1hZ2UKL1dpZHRoIDEwMAovSGVpZ2h0IDEwMAovQ29sb3JTcGFjZSBbL0luZGV4ZWQgL0RldmljZVJHQiAyCiAgICAgICAgICAgICAgPiRgBA\1dAovQml0c1BlckNvbXBvbmVudCA4Ci9GaWx0ZXIgL0ZsYXRlRGVjb2RlCi9MZW5ndGggNjkKPj4Kc3RyZWFtCniJK+ACixoiGCQZ6tRqaYxBjNkgYlYbJNwHNvI+zLwXUOYhjF0cZt1juLmNpRHsTgZ2BgZGsNsZAXagAvsNpJkYLmCZBwSMjG7bwPzNIHcAAP//AwByHR8YCmVuZHN0cmVhbQplbmRvYmoKNiAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9SZXNvdXJjZXMgOCAwIFIKL0NvbnRlbnRzIDcgMCBSCj4+CmVuZG9iago3IDAgb2JqCjw8Ci9MZW5ndGggNzY1Ci9GaWx0ZXIgL0ZsYXRlRGVjb2RlCj4+CnN0cmVhbQp4nG1TW2/aMBR+z6/wY32o5MTx3YpQR8tga9VWSk0rTXtLE5piEZKKZGj/fseGwqrQSJGPz/edi32O784PSZqxvI/OijRLoxqiCZkX6B1FQRLlgaIkDj0vylN0wfIuSvMk8NKF78cLnyehn0S+T1OeJAGNfS8OeZrQKKARCV0/iPwoCdCvUVbWxbawXc+y95yLYXrZ2fKtlKpkxq6Fsut7WddNdTUlsRe6qRdFoR/Szgm9iK5ImAY8zMPMUdnVTd/boR76nTYMWFM1g9JC96O2xrDjuhiV5qPjdbuDK6+5U6aBdbcSK7bvfVxB5BHx6Z/2xqOEJz4JFySM+L9gdX1gXdlpVRk2wJzCDt6SblWlxQ57BcvOoLcwJB2Sdhxiy+Gnz9hOHXqmuMtdHyTqRsvBqPHUwoDYP90IU7W6aIRiw6HS9mj6vZV73VKj1lqoNRfFtm3kEcC5E8Rz7wbYgf9L+0b0nVz/AJF0rVr2S7SLF5BRd1R4gCjZdWY73i+0M6DLEpLiPUK8h3Kl5d05VkORewPTB0Y5KZX4M5d4Jp9V3Z37RUVXDIJLcKDYTZaQP2h2rIRiJL0EwSUMviglh/2Nd8EBQnMi3HfC7fKlsdXB3nbtPk4rlQvRWFHpjXBOCH7p3zC5KGxrVKnBE6/XfLR6QAQ0htlZgIfX+7P9ALN5P1iloLlMGY7D8cwX8/3D8VxyxgEALr1UYgA9w9X3YjVqUUPw00oWluXyYDdKNprVnXIepXMOVdkXhcQM7eG1LXGCaxnYmjhDi8LoXQVfOmCOTpuWTYvtQfenCCwEXTbgFO1KNaoTLaQbUSCDuwOv0acAQWwvjOHHCFKCCG70iI+5rFuEeQRXAA=';
+        
+        downloadButton.href = dummyPdfData;
+        downloadButton.download = filename;
+        downloadButton.setAttribute('title', `Download ${filename}`);
+        
+        // Show the download section
+        downloadContainer.style.display = 'block';
+        
+        // Scroll to download button
+        downloadButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      // Handle customize button click
+      customizeButton.addEventListener('click', function() {
+        // Hide download section if shown from previous run
+        downloadContainer.style.display = 'none';
+        
+        // Validate inputs
+        const apiKey = apiKeyInput.value.trim();
+        const jobDescription = jobDescriptionTextarea.value.trim();
+        
+        if (!apiKey) {
+          logToConsole('API Key is required', 'error');
+          return;
+        }
+        
+        if (!selectedFileObj) {
+          logToConsole('Please upload a resume file', 'error');
+          return;
+        }
+        
+        if (!jobDescription) {
+          logToConsole('Job description is required', 'error');
+          return;
+        }
+        
+        // Log customization request
+        logToConsole('{"type": "application/pdf"}', 'info');
+        logToConsole('Submitting resume to API... {', 'info');
+        
+        // Simulate API request
+        setTimeout(() => {
+          const jobId = 'job-' + Math.random().toString(36).substr(2, 9);
+          logToConsole(`  "jobId": "${jobId}",`, 'info');
+          logToConsole('  "status": "pending"', 'info');
+          logToConsole('}', 'info');
+          
+          // Simulate processing stages
+          simulateProcessing(jobId);
+        }, 500);
+      });
+      
+      function simulateProcessing(jobId) {
+        const stages = [
+          { message: 'Parsing resume...', delay: 1000 },
+          { message: 'Analyzing job description...', delay: 1500 },
+          { message: 'Extracting key requirements...', delay: 2000 },
+          { message: 'Generating professional profile...', delay: 2500 },
+          { message: 'Customizing resume content...', delay: 3000 },
+          { message: 'Formatting document...', delay: 1500 },
+          { message: 'Optimization complete!', delay: 1000, type: 'success' }
+        ];
+        
+        let currentStage = 0;
+        
+        function processNextStage() {
+          if (currentStage < stages.length) {
+            const stage = stages[currentStage];
+            logToConsole(stage.message, stage.type || 'info');
+            currentStage++;
+            setTimeout(processNextStage, stage.delay);
+          } else {
+            // Final success message
+            setTimeout(() => {
+              const downloadUrl = `https://api.example.com/download/${jobId}`;
+              
+              logToConsole('Resume customization completed successfully!', 'success');
+              logToConsole(JSON.stringify({
+                status: 'completed',
+                jobId: jobId,
+                downloadUrl: downloadUrl,
+                matchScore: 87,
+                keywordMatches: 18,
+                improvementSuggestions: 3
+              }), 'success');
+              
+              // Set up download button
+              setupDownloadButton();
+            }, 1000);
+          }
+        }
+        
+        // Start processing
+        processNextStage();
+      }
+    });
+  </script>
+</body>
+</html>

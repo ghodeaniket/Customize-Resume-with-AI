@@ -77,12 +77,63 @@ class ResumeProcessor extends BaseWorker {
         aiOptions
       );
       
+      // Step 4: Convert to requested output format (default is text)
+      let formattedResult = customizedResume;
+      let resultMimeType = 'text/plain';
+      
+      if (job.data.outputFormat && job.data.outputFormat !== 'text') {
+        logger.info('Converting to requested output format', { 
+          format: job.data.outputFormat, 
+          jobId 
+        });
+        
+        // Lazy-load the FormatService only when needed
+        const FormatService = require('../utils/FormatService');
+        const formatService = new FormatService();
+        
+        // Format conversion options
+        const formatOptions = {
+          aiService: this.aiService,
+          promptManager: require('../utils/promptManager'),
+          markdownModel: job.data.markdownModel,
+          htmlModel: job.data.htmlModel
+        };
+        
+        // Get original format information if input was a PDF
+        if (job.data.resumeFormat === 'pdf' && job.data.preserveOriginalFormat) {
+          const originalFormatInfo = await formatService.analyzePdfFormat(resumeContent);
+          formatOptions.formatInfo = originalFormatInfo;
+        }
+        
+        // Convert to requested format
+        formattedResult = await formatService.convertToFormat(
+          customizedResume, 
+          job.data.outputFormat,
+          formatOptions
+        );
+        
+        // Set appropriate MIME type for the result
+        switch (job.data.outputFormat.toLowerCase()) {
+          case 'markdown':
+            resultMimeType = 'text/markdown';
+            break;
+          case 'html':
+            resultMimeType = 'text/html';
+            break;
+          case 'pdf':
+            resultMimeType = 'application/pdf';
+            break;
+        }
+      }
+      
       // Update job with result and metadata
       await this.updateJobStatus(jobId, 'completed', { 
-        result: customizedResume,
+        result: formattedResult,
+        resultMimeType: resultMimeType,
         completedAt: new Date(),
         metadata: JSON.stringify({
           optimizationPreset,
+          outputFormat: job.data.outputFormat || 'text',
           models: {
             profiler: job.data.profilerModel || process.env.DEFAULT_PROFILER_MODEL,
             researcher: job.data.researcherModel || process.env.DEFAULT_RESEARCHER_MODEL,
@@ -91,7 +142,10 @@ class ResumeProcessor extends BaseWorker {
         })
       });
       
-      logger.info('Resume customization completed successfully', { jobId });
+      logger.info('Resume customization completed successfully', { 
+        jobId, 
+        outputFormat: job.data.outputFormat || 'text' 
+      });
       return { status: 'success', jobId };
       
     } catch (error) {

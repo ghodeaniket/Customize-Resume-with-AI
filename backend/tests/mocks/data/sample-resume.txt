@@ -1,0 +1,33 @@
+John Doe
+Software Engineer
+john.doe@example.com
+(123) 456-7890
+
+SUMMARY
+Experienced software engineer with a passion for building scalable web applications.
+Skilled in JavaScript, Node.js, React, and cloud technologies.
+
+WORK EXPERIENCE
+Senior Software Engineer at TechCorp Inc.
+2020-01 - Present
+- Led development of cloud-native microservices architecture
+- Implemented CI/CD pipeline using GitHub Actions
+- Mentored junior developers and conducted code reviews
+
+Software Engineer at InnovateTech
+2017-05 - 2019-12
+- Developed RESTful APIs using Node.js and Express
+- Built responsive web applications with React
+- Improved application performance by optimizing database queries
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Technology
+2013-09 - 2017-05
+
+SKILLS
+Programming: JavaScript, TypeScript, Python, Java
+Web: React, Node.js, Express, HTML, CSS
+Cloud: AWS, Docker, Kubernetes
+Databases: MongoDB, PostgreSQL, Redis
+Tools: Git, GitHub Actions, Jira, Confluence

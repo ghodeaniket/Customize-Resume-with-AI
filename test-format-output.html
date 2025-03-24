@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Format Output Tester</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      margin-bottom: 20px;
+      background-color: white;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 5px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 15px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
+    .upload-icon {
+      font-size: 40px;
+      color: #ccc;
+      margin-bottom: 10px;
+    }
+    .result-area {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 20px;
+      margin-top: 20px;
+      background-color: #ffffff;
+      min-height: 200px;
+    }
+    .result-tabs {
+      margin-top: 20px;
+    }
+    .result-container {
+      margin-top: 15px;
+      overflow: auto;
+      max-height: 500px;
+    }
+    #htmlResult {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      height: 500px;
+      width: 100%;
+    }
+    #resultIframe {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    #pdfEmbed {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .progress-area {
+      margin: 30px 0;
+    }
+    #statusMessage {
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .format-options {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    .format-option {
+      flex: 1;
+      min-width: 120px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .format-option:hover {
+      background-color: #f0f7ff;
+      border-color: #4169e1;
+    }
+    .format-option.selected {
+      background-color: #4169e1;
+      color: white;
+      border-color: #2a4db7;
+    }
+    .format-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .download-button {
+      display: inline-block;
+      margin-top: 20px;
+      background-color: #28a745;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+    .download-button:hover {
+      background-color: #218838;
+      text-decoration: none;
+      color: white;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow: auto;
+      max-height: 500px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Resume Format Output Tester</h1>
+    <p class="subtitle">Test the new multi-format output functionality</p>
+    
+    <div class="card">
+      <div class="mb-3">
+        <label for="apiKey" class="form-label">API Key</label>
+        <input type="text" class="form-control" id="apiKey" value="demo-api-key-55902034-f169-4a9d-a4a1-c205a96ba56f">
+        <div class="form-text">Demo key is pre-filled for testing</div>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Resume</label>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📄</div>
+          <span class="upload-button" id="uploadButton">Upload a file</span> or drag and drop
+          <div class="mt-2 text-muted">PDF, DOCX, or plain text file</div>
+          <input type="file" id="resumeFile" accept=".pdf,.docx,.txt" style="display: none;">
+        </div>
+        <div id="selectedFile" class="mt-2"></div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="resumeText" class="form-label">Or paste resume text</label>
+        <textarea class="form-control" id="resumeText" rows="5" placeholder="Paste resume text here..."></textarea>
+      </div>
+      
+      <div class="mb-3">
+        <label for="jobDescription" class="form-label">Job Description</label>
+        <textarea class="form-control" id="jobDescription" rows="5" placeholder="Paste job description here..."></textarea>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Output Format</label>
+        <div class="format-options">
+          <div class="format-option selected" data-format="text">
+            <div class="format-icon">📝</div>
+            <div>Plain Text</div>
+            <small class="text-muted">Simple text format</small>
+          </div>
+          <div class="format-option" data-format="markdown">
+            <div class="format-icon">📊</div>
+            <div>Markdown</div>
+            <small class="text-muted">Structured text with formatting</small>
+          </div>
+          <div class="format-option" data-format="html">
+            <div class="format-icon">🌐</div>
+            <div>HTML</div>
+            <small class="text-muted">Web-ready format</small>
+          </div>
+          <div class="format-option" data-format="pdf">
+            <div class="format-icon">📎</div>
+            <div>PDF</div>
+            <small class="text-muted">Professional document</small>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mb-3 form-check">
+        <input type="checkbox" class="form-check-input" id="preserveFormatCheck">
+        <label class="form-check-label" for="preserveFormatCheck">Attempt to preserve original format (for PDF input)</label>
+      </div>
+      
+      <div class="text-center">
+        <button class="btn btn-primary btn-lg" id="submitButton">Customize Resume</button>
+      </div>
+      
+      <div class="progress-area" style="display: none;">
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+        </div>
+        <div id="statusMessage" class="text-center">Processing...</div>
+      </div>
+    </div>
+    
+    <div class="card result-card" style="display: none;">
+      <h3>Customized Resume</h3>
+      
+      <ul class="nav nav-tabs result-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview" type="button" role="tab">Preview</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="raw-tab" data-bs-toggle="tab" data-bs-target="#raw" type="button" role="tab">Raw Output</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="response-tab" data-bs-toggle="tab" data-bs-target="#response" type="button" role="tab">API Response</button>
+        </li>
+      </ul>
+      
+      <div class="tab-content result-container">
+        <div class="tab-pane fade show active" id="preview" role="tabpanel">
+          <!-- Content will be loaded here based on format type -->
+          <div id="textPreview" style="display: none;">
+            <pre id="textContent"></pre>
+          </div>
+          
+          <div id="markdownPreview" style="display: none;">
+            <div id="markdownContent"></div>
+          </div>
+          
+          <div id="htmlPreview" style="display: none;">
+            <iframe id="resultIframe" sandbox="allow-same-origin"></iframe>
+          </div>
+          
+          <div id="pdfPreview" style="display: none;">
+            <embed id="pdfEmbed" type="application/pdf" src="">
+          </div>
+        </div>
+        
+        <div class="tab-pane fade" id="raw" role="tabpanel">
+          <pre id="rawOutput"></pre>
+        </div>
+        
+        <div class="tab-pane fade" id="response" role="tabpanel">
+          <pre id="apiResponse"></pre>
+        </div>
+      </div>
+      
+      <div class="text-center mt-4">
+        <a href="#" class="download-button" id="downloadButton" download="customized-resume">Download Customized Resume</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM Elements
+      const apiKeyInput = document.getElementById('apiKey');
+      const uploadArea = document.getElementById('uploadArea');
+      const resumeFileInput = document.getElementById('resumeFile');
+      const resumeTextarea = document.getElementById('resumeText');
+      const jobDescriptionTextarea = document.getElementById('jobDescription');
+      const preserveFormatCheck = document.getElementById('preserveFormatCheck');
+      const submitButton = document.getElementById('submitButton');
+      const formatOptions = document.querySelectorAll('.format-option');
+      const progressArea = document.querySelector('.progress-area');
+      const progressBar = document.querySelector('.progress-bar');
+      const statusMessage = document.getElementById('statusMessage');
+      const resultCard = document.querySelector('.result-card');
+      const selectedFileDiv = document.getElementById('selectedFile');
+      
+      // Results elements
+      const textPreview = document.getElementById('textPreview');
+      const markdownPreview = document.getElementById('markdownPreview');
+      const htmlPreview = document.getElementById('htmlPreview');
+      const pdfPreview = document.getElementById('pdfPreview');
+      const textContent = document.getElementById('textContent');
+      const markdownContent = document.getElementById('markdownContent');
+      const resultIframe = document.getElementById('resultIframe');
+      const pdfEmbed = document.getElementById('pdfEmbed');
+      const rawOutput = document.getElementById('rawOutput');
+      const apiResponse = document.getElementById('apiResponse');
+      const downloadButton = document.getElementById('downloadButton');
+      
+      // Variables
+      let selectedFormat = 'text';
+      let selectedFile = null;
+      let base64Content = null;
+      let outputResult = null;
+      let mimeType = null;
+      
+      // Handle format option selection
+      formatOptions.forEach(option => {
+        option.addEventListener('click', function() {
+          formatOptions.forEach(opt => opt.classList.remove('selected'));
+          this.classList.add('selected');
+          selectedFormat = this.getAttribute('data-format');
+        });
+      });
+      
+      // Handle file upload
+      resumeFileInput.addEventListener('change', function(e) {
+        if (this.files && this.files.length > 0) {
+          handleFileSelection(this.files[0]);
+        }
+      });
+      
+      // Drag and drop functionality
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        uploadArea.style.borderColor = '#4169e1';
+        uploadArea.style.backgroundColor = '#f0f7ff';
+      }
+      
+      function unhighlight() {
+        uploadArea.style.borderColor = '#ddd';
+        uploadArea.style.backgroundColor = '#f9f9f9';
+      }
+      
+      uploadArea.addEventListener('drop', function(e) {
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          handleFileSelection(file);
+        }
+      });
+      
+      uploadArea.addEventListener('click', function() {
+        resumeFileInput.click();
+      });
+      
+      function handleFileSelection(file) {
+        selectedFile = file;
+        selectedFileDiv.textContent = `Selected file: ${file.name}`;
+        
+        // If it's a PDF or DOCX, read as base64
+        if (file.type === 'application/pdf' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            base64Content = e.target.result.split(',')[1]; // Remove data URL prefix
+            resumeTextarea.value = ''; // Clear text area since we have a file
+          };
+          reader.readAsDataURL(file);
+        }
+        // If it's a text file, read as text
+        else if (file.type === 'text/plain') {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            resumeTextarea.value = e.target.result;
+            base64Content = null; // Clear base64 since we have text
+          };
+          reader.readAsText(file);
+        }
+      }
+      
+      // Form submission
+      submitButton.addEventListener('click', function() {
+        const apiKey = apiKeyInput.value.trim();
+        let resumeContent = resumeTextarea.value.trim();
+        const jobDescription = jobDescriptionTextarea.value.trim();
+        const preserveFormat = preserveFormatCheck.checked;
+        
+        // Validate inputs
+        if (!apiKey) {
+          alert('Please enter an API key');
+          return;
+        }
+        
+        if (!resumeContent && !base64Content) {
+          alert('Please upload a resume file or paste resume text');
+          return;
+        }
+        
+        if (!jobDescription) {
+          alert('Please enter a job description');
+          return;
+        }
+        
+        // Determine resume format
+        let resumeFormat = 'text';
+        if (selectedFile) {
+          if (selectedFile.type === 'application/pdf') {
+            resumeFormat = 'pdf';
+            resumeContent = base64Content;
+          } else if (selectedFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            resumeFormat = 'docx';
+            resumeContent = base64Content;
+          }
+        }
+        
+        // Show progress
+        progressArea.style.display = 'block';
+        resultCard.style.display = 'none';
+        submitButton.disabled = true;
+        
+        // Build API request payload
+        const requestBody = {
+          resumeContent: resumeContent,
+          jobDescription: jobDescription,
+          resumeFormat: resumeFormat,
+          outputFormat: selectedFormat,
+          preserveOriginalFormat: preserveFormat,
+          isJobDescriptionUrl: false
+        };
+        
+        // Mock API call
+        simulateAPICall(requestBody);
+      });
+      
+      function simulateAPICall(requestBody) {
+        // In a real implementation, this would be an actual API call
+        // For demo purposes, we'll simulate the API call process
+        
+        // Simulate job creation
+        updateProgress(10, 'Job created, now processing...');
+        
+        setTimeout(() => {
+          updateProgress(30, 'Extracting resume information...');
+          
+          setTimeout(() => {
+            updateProgress(50, 'Analyzing job description...');
+            
+            setTimeout(() => {
+              updateProgress(70, 'Customizing resume content...');
+              
+              setTimeout(() => {
+                updateProgress(90, `Generating ${requestBody.outputFormat.toUpperCase()} output...`);
+                
+                setTimeout(() => {
+                  updateProgress(100, 'Complete!');
+                  
+                  // Generate mock result based on format
+                  const result = generateMockResult(requestBody.outputFormat);
+                  
+                  // Display result
+                  displayResult(result, requestBody.outputFormat);
+                }, 1500);
+              }, 1500);
+            }, 1500);
+          }, 1500);
+        }, 1500);
+      }
+      
+      function updateProgress(percent, message) {
+        progressBar.style.width = `${percent}%`;
+        statusMessage.textContent = message;
+      }
+      
+      function generateMockResult(format) {
+        const sampleResume = `John Doe
+Software Engineering Manager
+john.doe@example.com | (555) 123-4567 | LinkedIn: linkedin.com/in/johndoe
+
+PROFESSIONAL SUMMARY
+Experienced engineering leader with 8+ years of software development experience and 3+ years in team leadership roles. Proven track record of delivering high-quality software products and mentoring engineering teams.
+
+EXPERIENCE
+Senior Engineering Manager, Tech Solutions Inc.
+June 2020 - Present
+- Lead a team of 7 software engineers developing cloud-native applications
+- Improved team velocity by 35% through process improvements and tooling
+- Collaborate with product managers to define roadmaps and prioritize features
+- Mentor junior engineers and provide technical guidance
+
+Software Engineer, Innovation Labs
+January 2017 - May 2020
+- Developed RESTful APIs serving 1M+ daily requests
+- Implemented CI/CD pipelines reducing deployment time by 60%
+- Led migration from monolith to microservices architecture
+
+EDUCATION
+Master of Computer Science, Stanford University
+2015-2017
+
+Bachelor of Science in Computer Engineering, MIT
+2011-2015
+
+SKILLS
+- Programming: Java, Python, JavaScript, Go
+- Cloud: AWS, Docker, Kubernetes
+- Leadership: Team Management, Mentoring, Process Improvement
+- Methodologies: Agile, Scrum, Kanban`;
+
+        const mockResults = {
+          text: sampleResume,
+          markdown: `# John Doe
+**Software Engineering Manager**
+john.doe@example.com | (555) 123-4567 | [LinkedIn](https://linkedin.com/in/johndoe)
+
+## PROFESSIONAL SUMMARY
+Experienced engineering leader with 8+ years of software development experience and 3+ years in team leadership roles. Proven track record of delivering high-quality software products and mentoring engineering teams.
+
+## EXPERIENCE
+### Senior Engineering Manager, Tech Solutions Inc.
+*June 2020 - Present*
+- Lead a team of 7 software engineers developing cloud-native applications
+- Improved team velocity by 35% through process improvements and tooling
+- Collaborate with product managers to define roadmaps and prioritize features
+- Mentor junior engineers and provide technical guidance
+
+### Software Engineer, Innovation Labs
+*January 2017 - May 2020*
+- Developed RESTful APIs serving 1M+ daily requests
+- Implemented CI/CD pipelines reducing deployment time by 60%
+- Led migration from monolith to microservices architecture
+
+## EDUCATION
+**Master of Computer Science**, Stanford University
+*2015-2017*
+
+**Bachelor of Science in Computer Engineering**, MIT
+*2011-2015*
+
+## SKILLS
+- **Programming**: Java, Python, JavaScript, Go
+- **Cloud**: AWS, Docker, Kubernetes
+- **Leadership**: Team Management, Mentoring, Process Improvement
+- **Methodologies**: Agile, Scrum, Kanban`,
+
+          html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>John Doe - Software Engineering Manager</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #2c3e50;
+      padding-bottom: 10px;
+    }
+    h1 {
+      margin: 0;
+      color: #2c3e50;
+      font-size: 28px;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    .contact {
+      margin-top: 10px;
+    }
+    .section {
+      margin: 25px 0;
+    }
+    h2 {
+      color: #2c3e50;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .job {
+      margin-bottom: 15px;
+    }
+    .job-title {
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .company {
+      font-weight: bold;
+    }
+    .date {
+      color: #666;
+      font-style: italic;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+    .skills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .skill-category {
+      flex: 1;
+      min-width: 200px;
+    }
+    .skill-category h3 {
+      margin-bottom: 5px;
+    }
+    @media print {
+      body {
+        padding: 0;
+      }
+      .skills {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>John Doe</h1>
+    <div class="title">Software Engineering Manager</div>
+    <div class="contact">
+      john.doe@example.com | (555) 123-4567 | LinkedIn: linkedin.com/in/johndoe
+    </div>
+  </header>
+  
+  <div class="section">
+    <h2>Professional Summary</h2>
+    <p>
+      Experienced engineering leader with 8+ years of software development experience and 3+ years in team leadership roles. Proven track record of delivering high-quality software products and mentoring engineering teams.
+    </p>
+  </div>
+  
+  <div class="section">
+    <h2>Experience</h2>
+    <div class="job">
+      <div class="job-title">Senior Engineering Manager, <span class="company">Tech Solutions Inc.</span></div>
+      <div class="date">June 2020 - Present</div>
+      <ul>
+        <li>Lead a team of 7 software engineers developing cloud-native applications</li>
+        <li>Improved team velocity by 35% through process improvements and tooling</li>
+        <li>Collaborate with product managers to define roadmaps and prioritize features</li>
+        <li>Mentor junior engineers and provide technical guidance</li>
+      </ul>
+    </div>
+    
+    <div class="job">
+      <div class="job-title">Software Engineer, <span class="company">Innovation Labs</span></div>
+      <div class="date">January 2017 - May 2020</div>
+      <ul>
+        <li>Developed RESTful APIs serving 1M+ daily requests</li>
+        <li>Implemented CI/CD pipelines reducing deployment time by 60%</li>
+        <li>Led migration from monolith to microservices architecture</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Education</h2>
+    <div class="job">
+      <div class="job-title">Master of Computer Science, <span class="company">Stanford University</span></div>
+      <div class="date">2015-2017</div>
+    </div>
+    
+    <div class="job">
+      <div class="job-title">Bachelor of Science in Computer Engineering, <span class="company">MIT</span></div>
+      <div class="date">2011-2015</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Skills</h2>
+    <div class="skills">
+      <div class="skill-category">
+        <h3>Programming</h3>
+        <p>Java, Python, JavaScript, Go</p>
+      </div>
+      <div class="skill-category">
+        <h3>Cloud</h3>
+        <p>AWS, Docker, Kubernetes</p>
+      </div>
+      <div class="skill-category">
+        <h3>Leadership</h3>
+        <p>Team Management, Mentoring, Process Improvement</p>
+      </div>
+      <div class="skill-category">
+        <h3>Methodologies</h3>
+        <p>Agile, Scrum, Kanban</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`,
+
+          // For PDF, we'll use a data URL of a simple PDF
+          pdf: 'data:application/pdf;base64,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'
+        };
+        
+        return mockResults[format];
+      }
+      
+      function displayResult(result, format) {
+        // Hide all preview divs
+        textPreview.style.display = 'none';
+        markdownPreview.style.display = 'none';
+        htmlPreview.style.display = 'none';
+        pdfPreview.style.display = 'none';
+        
+        // Update API response tab
+        apiResponse.textContent = JSON.stringify({
+          status: 'success',
+          data: {
+            jobId: '58a3f6d9-c354-4f5b-b9c8-d672c24a1a03',
+            status: 'completed',
+            outputFormat: format,
+            resultMimeType: getMimeType(format),
+            completedAt: new Date().toISOString()
+          }
+        }, null, 2);
+        
+        // Update raw output
+        rawOutput.textContent = result;
+        
+        // Display the appropriate preview
+        if (format === 'text') {
+          textContent.textContent = result;
+          textPreview.style.display = 'block';
+          mimeType = 'text/plain';
+          outputResult = result;
+        }
+        else if (format === 'markdown') {
+          markdownContent.innerHTML = marked.parse(result);
+          markdownPreview.style.display = 'block';
+          mimeType = 'text/markdown';
+          outputResult = result;
+        }
+        else if (format === 'html') {
+          let iframe = document.getElementById('resultIframe');
+          iframe.contentWindow.document.open();
+          iframe.contentWindow.document.write(result);
+          iframe.contentWindow.document.close();
+          htmlPreview.style.display = 'block';
+          mimeType = 'text/html';
+          outputResult = result;
+        }
+        else if (format === 'pdf') {
+          pdfEmbed.src = result; // Use the data URL
+          pdfPreview.style.display = 'block';
+          mimeType = 'application/pdf';
+          outputResult = result;
+        }
+        
+        // Set download button
+        setupDownload(result, format);
+        
+        // Show result card
+        resultCard.style.display = 'block';
+        progressArea.style.display = 'none';
+        submitButton.disabled = false;
+      }
+      
+      function getMimeType(format) {
+        switch (format) {
+          case 'text': return 'text/plain';
+          case 'markdown': return 'text/markdown';
+          case 'html': return 'text/html';
+          case 'pdf': return 'application/pdf';
+          default: return 'text/plain';
+        }
+      }
+      
+      function setupDownload(content, format) {
+        let extension = '';
+        let dataUrl = '';
+        
+        switch (format) {
+          case 'text':
+            extension = '.txt';
+            dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+            break;
+          case 'markdown':
+            extension = '.md';
+            dataUrl = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(content);
+            break;
+          case 'html':
+            extension = '.html';
+            dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(content);
+            break;
+          case 'pdf':
+            extension = '.pdf';
+            dataUrl = content; // Already a data URL
+            break;
+        }
+        
+        downloadButton.setAttribute('download', 'customized-resume' + extension);
+        downloadButton.setAttribute('href', dataUrl);
+      }
+    });
+  </script>
+</body>
+</html>

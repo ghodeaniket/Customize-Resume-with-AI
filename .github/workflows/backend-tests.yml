@@ -1,0 +1,81 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, development, phase* ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    branches: [ main, development ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      # Redis service for testing
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      # PostgreSQL service for testing
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: resume_customizer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/resume_customizer_test
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      OPENROUTER_API_KEY: test-api-key
+      API_KEY_SECRET: test-secret-key
+      SERVICE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+        
+      - name: Run migrations
+        working-directory: ./backend
+        run: npm run db:migrate
+      
+      - name: Run tests with coverage
+        working-directory: ./backend
+        run: npm run test:ci
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v2
+        with:
+          directory: ./backend/coverage
+          flags: backend
+          fail_ci_if_error: false
+          verbose: true

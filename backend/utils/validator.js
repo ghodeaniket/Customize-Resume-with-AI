@@ -106,10 +106,20 @@ class Validator {
         .messages({
           'any.only': 'Resume format must be one of: text, pdf, docx, html, json'
         }),
+      outputFormat: Joi.string().valid('text', 'markdown', 'html', 'pdf').default('text')
+        .messages({
+          'any.only': 'Output format must be one of: text, markdown, html, pdf'
+        }),
+      preserveOriginalFormat: Joi.boolean().default(false)
+        .messages({
+          'boolean.base': 'Preserve original format must be a boolean'
+        }),
       isJobDescriptionUrl: Joi.boolean().default(false),
       profilerModel: Joi.string(),
       researcherModel: Joi.string(),
-      strategistModel: Joi.string()
+      strategistModel: Joi.string(),
+      markdownModel: Joi.string(),
+      htmlModel: Joi.string()
     }),
     
     // Job status request schema
