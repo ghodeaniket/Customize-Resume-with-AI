@@ -42,30 +42,53 @@ class ResumeProcessor extends BaseWorker {
       // Fetch job description if needed
       const actualJobDescription = await this.fetchJobDescription(job.data);
       
+      // Get optimization preset from job data
+      const optimizationPreset = job.data.optimizationFocus || 'default';
+      logger.info('Using optimization preset', { optimizationPreset });
+      
+      // Common options for all AI requests
+      const aiOptions = {
+        optimizationPreset,
+        profilerModel: job.data.profilerModel,
+        researcherModel: job.data.researcherModel,
+        strategistModel: job.data.strategistModel
+      };
+      
       // Step 1: Generate professional profile
+      logger.info('Starting professional profile generation', { jobId });
       const profileContent = await this.aiService.generateProfileFromResume(
         parsedResumeContent, 
-        { profilerModel: job.data.profilerModel }
+        aiOptions
       );
       
       // Step 2: Analyze job description
+      logger.info('Starting job description analysis', { jobId });
       const researchContent = await this.aiService.analyzeJobDescription(
         actualJobDescription,
-        { researcherModel: job.data.researcherModel }
+        aiOptions
       );
       
       // Step 3: Generate customized resume
+      logger.info('Starting resume customization', { jobId });
       const customizedResume = await this.aiService.generateCustomizedResume(
         profileContent,
         researchContent,
         parsedResumeContent,
-        { strategistModel: job.data.strategistModel }
+        aiOptions
       );
       
-      // Update job with result
+      // Update job with result and metadata
       await this.updateJobStatus(jobId, 'completed', { 
         result: customizedResume,
-        completedAt: new Date()
+        completedAt: new Date(),
+        metadata: JSON.stringify({
+          optimizationPreset,
+          models: {
+            profiler: job.data.profilerModel || process.env.DEFAULT_PROFILER_MODEL,
+            researcher: job.data.researcherModel || process.env.DEFAULT_RESEARCHER_MODEL,
+            strategist: job.data.strategistModel || process.env.DEFAULT_STRATEGIST_MODEL
+          }
+        })
       });
       
       logger.info('Resume customization completed successfully', { jobId });

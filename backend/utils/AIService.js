@@ -1,6 +1,6 @@
 // utils/AIService.js
 const logger = require('./logger');
-const { loadPromptTemplate } = require('./promptManager');
+const { loadPromptTemplate, getOptimizationConfig } = require('./promptManager');
 
 /**
  * Service for handling AI-related interactions
@@ -22,10 +22,24 @@ class AIService {
    */
   async generateProfileFromResume(resumeContent, options = {}) {
     try {
-      const profilerPrompt = await loadPromptTemplate('profiler');
+      // Get configuration based on optimization preset
+      const optimizationPreset = options.optimizationPreset || 'default';
+      const config = getOptimizationConfig(optimizationPreset);
+      
+      const promptOptions = {
+        useEnhanced: config.useEnhanced,
+        promptSuffix: options.promptSuffix || config.promptSuffix
+      };
+      
+      const profilerPrompt = await loadPromptTemplate('profiler', promptOptions);
       const model = options.profilerModel || process.env.DEFAULT_PROFILER_MODEL || 'anthropic/claude-3-opus';
       
-      return await this.makeRequest(model, profilerPrompt, resumeContent, options);
+      const requestOptions = {
+        temperature: options.temperature || config.temperature || 0.7,
+        max_tokens: options.max_tokens || config.profilerMaxTokens || 2000
+      };
+      
+      return await this.makeRequest(model, profilerPrompt, resumeContent, requestOptions);
     } catch (error) {
       logger.error('Profile generation failed', { error });
       throw new Error(`Failed to generate profile: ${error.message}`);
@@ -40,10 +54,24 @@ class AIService {
    */
   async analyzeJobDescription(jobDescription, options = {}) {
     try {
-      const researcherPrompt = await loadPromptTemplate('researcher');
+      // Get configuration based on optimization preset
+      const optimizationPreset = options.optimizationPreset || 'default';
+      const config = getOptimizationConfig(optimizationPreset);
+      
+      const promptOptions = {
+        useEnhanced: config.useEnhanced,
+        promptSuffix: options.promptSuffix || config.promptSuffix
+      };
+      
+      const researcherPrompt = await loadPromptTemplate('researcher', promptOptions);
       const model = options.researcherModel || process.env.DEFAULT_RESEARCHER_MODEL || 'anthropic/claude-3-opus';
       
-      return await this.makeRequest(model, researcherPrompt, jobDescription, options);
+      const requestOptions = {
+        temperature: options.temperature || config.temperature || 0.7,
+        max_tokens: options.max_tokens || config.researcherMaxTokens || 2000
+      };
+      
+      return await this.makeRequest(model, researcherPrompt, jobDescription, requestOptions);
     } catch (error) {
       logger.error('Job description analysis failed', { error });
       throw new Error(`Failed to analyze job description: ${error.message}`);
@@ -60,11 +88,38 @@ class AIService {
    */
   async generateCustomizedResume(profileContent, researchContent, originalResume, options = {}) {
     try {
-      const strategistPrompt = await loadPromptTemplate('resume-strategist');
-      const model = options.strategistModel || process.env.DEFAULT_STRATEGIST_MODEL || 'anthropic/claude-3-opus';
-      const content = `comprehensive profile - ${profileContent}, recommendations - ${researchContent} and original resume - ${originalResume}`;
+      // Get configuration based on optimization preset
+      const optimizationPreset = options.optimizationPreset || 'default';
+      const config = getOptimizationConfig(optimizationPreset);
       
-      return await this.makeRequest(model, strategistPrompt, content, options);
+      const promptOptions = {
+        useEnhanced: config.useEnhanced,
+        promptSuffix: options.promptSuffix || config.promptSuffix
+      };
+      
+      const strategistPrompt = await loadPromptTemplate('resumeStrategist', promptOptions);
+      const model = options.strategistModel || process.env.DEFAULT_STRATEGIST_MODEL || 'anthropic/claude-3-opus';
+      
+      // Improved context format
+      const content = `
+# Professional Profile Analysis
+${profileContent}
+
+# Job Requirements Analysis
+${researchContent}
+
+# Original Resume
+${originalResume}
+
+Based on the above information, create a customized resume that highlights relevant skills and experiences for this specific job.
+      `;
+      
+      const requestOptions = {
+        temperature: options.temperature || config.temperature || 0.7,
+        max_tokens: options.max_tokens || config.strategistMaxTokens || 3000
+      };
+      
+      return await this.makeRequest(model, strategistPrompt, content, requestOptions);
     } catch (error) {
       logger.error('Resume customization failed', { error });
       throw new Error(`Failed to generate customized resume: ${error.message}`);
