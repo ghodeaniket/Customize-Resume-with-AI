@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Customizer E2E Test</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+      margin-bottom: 20px;
+      background-color: white;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 5px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 15px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
+    .upload-icon {
+      font-size: 40px;
+      color: #ccc;
+      margin-bottom: 10px;
+    }
+    .debug-console {
+      font-family: monospace;
+      background-color: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+      height: 300px;
+      overflow-y: auto;
+      margin-top: 15px;
+    }
+    .console-line {
+      margin: 0;
+      padding: 2px 0;
+    }
+    .console-time {
+      color: #666;
+    }
+    .console-info {
+      color: #0066cc;
+    }
+    .console-error {
+      color: #cc0000;
+    }
+    .console-success {
+      color: #00aa00;
+    }
+    .upload-button {
+      display: inline-block;
+      cursor: pointer;
+      color: #4169e1;
+      text-decoration: underline;
+    }
+    .selected-file {
+      margin-top: 10px;
+      font-style: italic;
+    }
+    .customize-button {
+      background-color: #4169e1;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .customize-button:hover {
+      background-color: #3253c1;
+    }
+    .json {
+      color: #333;
+    }
+    .json-key {
+      color: #0d6efd;
+    }
+    .json-string {
+      color: #198754;
+    }
+    .json-number {
+      color: #fd7e14;
+    }
+    .download-button {
+      display: inline-block;
+      margin-top: 20px;
+      background-color: #28a745;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+    .download-button:hover {
+      background-color: #218838;
+      text-decoration: none;
+      color: white;
+    }
+    #downloadContainer {
+      text-align: center;
+      margin-top: 20px;
+      display: none;
+    }
+    .hidden {
+      display: none;
+    }
+    .result-container {
+      white-space: pre-wrap;
+      font-family: monospace;
+      background-color: #f7f7f7;
+      padding: 15px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Resume Customizer E2E Test</h1>
+    <p class="subtitle">Test your customization API with real data</p>
+    
+    <div class="card">
+      <div class="mb-3">
+        <label for="apiUrl" class="form-label">API URL</label>
+        <input type="text" class="form-control" id="apiUrl" value="http://localhost:3000/api/v1/resume/customize">
+      </div>
+      
+      <div class="mb-3">
+        <label for="apiKey" class="form-label">API Key</label>
+        <input type="text" class="form-control" id="apiKey" value="test-api-key">
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Resume</label>
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-icon">📄</div>
+          <span class="upload-button" id="uploadButton">Upload a file</span> or drag and drop
+          <div class="mt-2 text-muted">PDF, DOCX, or TXT up to 10MB</div>
+          <input type="file" id="resumeFile" accept=".pdf,.docx,.txt" style="display: none;">
+        </div>
+        <div class="selected-file" id="selectedFile"></div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="resumeFormat" class="form-label">Resume Format</label>
+        <select class="form-select" id="resumeFormat">
+          <option value="text">Text</option>
+          <option value="pdf">PDF</option>
+          <option value="docx">DOCX</option>
+        </select>
+      </div>
+      
+      <div class="mb-3">
+        <label for="jobDescription" class="form-label">Job Description</label>
+        <div class="text-end mb-1">
+          <a href="#" id="loadSampleJob">Load sample job description</a>
+        </div>
+        <textarea class="form-control" id="jobDescription" rows="8" placeholder="Paste job description here..."></textarea>
+      </div>
+      
+      <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="isJobDescriptionUrl">
+        <label class="form-check-label" for="isJobDescriptionUrl">
+          Job description is a URL
+        </label>
+      </div>
+      
+      <div class="text-center">
+        <button class="customize-button" id="customizeButton">Customize Resume</button>
+      </div>
+      
+      <!-- Download container - initially hidden -->
+      <div id="resultContainer" class="mt-4" style="display: none;">
+        <h4>Customization Result</h4>
+        <div class="result-container" id="resultContent"></div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h3>Debug Console</h3>
+      <div class="debug-console" id="debugConsole"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // References to DOM elements
+      const apiUrlInput = document.getElementById('apiUrl');
+      const apiKeyInput = document.getElementById('apiKey');
+      const uploadArea = document.getElementById('uploadArea');
+      const uploadButton = document.getElementById('uploadButton');
+      const resumeFileInput = document.getElementById('resumeFile');
+      const resumeFormatSelect = document.getElementById('resumeFormat');
+      const selectedFileDiv = document.getElementById('selectedFile');
+      const jobDescriptionTextarea = document.getElementById('jobDescription');
+      const isJobDescriptionUrlCheckbox = document.getElementById('isJobDescriptionUrl');
+      const loadSampleJobLink = document.getElementById('loadSampleJob');
+      const customizeButton = document.getElementById('customizeButton');
+      const debugConsole = document.getElementById('debugConsole');
+      const resultContainer = document.getElementById('resultContainer');
+      const resultContent = document.getElementById('resultContent');
+      
+      // Track selected file
+      let selectedFileObj = null;
+      let currentJobId = null;
+      let pollInterval = null;
+      
+      // Sample job description
+      const sampleJobDescription = `Senior Software Engineering Manager
+
+About Us:
+We are a growing tech company building innovative solutions using cutting-edge technologies. Our engineering team is passionate about creating scalable, maintainable software that solves real-world problems.
+
+Job Description:
+We are looking for an experienced Engineering Manager to lead a team of talented software engineers. The ideal candidate will have a strong technical background, excellent leadership skills, and a track record of delivering high-quality software products.
+
+Responsibilities:
+• Lead and mentor a team of 5-8 software engineers
+• Work closely with product managers to define and prioritize features
+• Drive technical decision-making and architecture planning
+• Establish engineering best practices and coding standards
+• Ensure on-time delivery of high-quality software
+• Conduct performance reviews and foster career growth for team members
+• Participate in technical discussions and code reviews
+• Collaborate with other engineering teams to ensure system integration
+
+Requirements:
+• 5+ years of experience in software engineering
+• 3+ years of experience in a technical leadership role
+• Strong programming skills in at least one modern language (Java, Python, Go, etc.)
+• Experience with modern software development practices (Agile, CI/CD, TDD)
+• Excellent communication and interpersonal skills
+• Bachelor's degree in Computer Science or related field (or equivalent experience)
+• Ability to balance technical leadership and people management responsibilities
+
+Nice to Have:
+• Experience with cloud platforms (AWS, GCP, Azure)
+• Background in distributed systems and microservices architecture
+• Experience with containerization technologies (Docker, Kubernetes)
+• Previous experience in a fast-paced startup environment
+
+Benefits:
+• Competitive salary and equity package
+• Health, dental, and vision insurance
+• 401(k) matching
+• Flexible working hours and remote work options
+• Professional development budget
+• Team events and company retreats`;
+      
+      // Display message in the debug console
+      function logToConsole(message, type = 'info') {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const logEntry = document.createElement('p');
+        logEntry.className = 'console-line';
+        
+        if (typeof message === 'object') {
+          try {
+            // Format JSON with syntax highlighting
+            const formatted = formatJSON(message);
+            logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${formatted}</span>`;
+          } catch (e) {
+            // If not valid JSON, display as plain text
+            logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${JSON.stringify(message)}</span>`;
+          }
+        } else if (typeof message === 'string' && (message.startsWith('{') || message.startsWith('['))) {
+          try {
+            // Format JSON with syntax highlighting
+            const jsonObj = JSON.parse(message);
+            const formatted = formatJSON(jsonObj);
+            logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${formatted}</span>`;
+          } catch (e) {
+            // If not valid JSON, display as plain text
+            logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${message}</span>`;
+          }
+        } else {
+          logEntry.innerHTML = `<span class="console-time">[${timeString}]</span> <span class="console-${type}">${message}</span>`;
+        }
+        
+        debugConsole.appendChild(logEntry);
+        debugConsole.scrollTop = debugConsole.scrollHeight;
+      }
+      
+      // Format JSON with syntax highlighting
+      function formatJSON(obj) {
+        return JSON.stringify(obj, null, 2)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            let cls = 'json-number';
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                cls = 'json-key';
+                match = match.replace(/"(.*)":/g, '<b>"$1"</b>:');
+              } else {
+                cls = 'json-string';
+              }
+            } else if (/true|false/.test(match)) {
+              cls = 'json-boolean';
+            } else if (/null/.test(match)) {
+              cls = 'json-null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+          })
+          .replace(/\n/g, '<br>')
+          .replace(/\s{2}/g, '&nbsp;&nbsp;');
+      }
+      
+      // Handle file upload button click
+      uploadButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        resumeFileInput.click();
+      });
+      
+      // Handle file upload area click
+      uploadArea.addEventListener('click', function(e) {
+        if (e.target !== uploadButton) {
+          resumeFileInput.click();
+        }
+      });
+      
+      // Handle file drag and drop
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        uploadArea.style.borderColor = '#4169e1';
+        uploadArea.style.backgroundColor = '#f0f8ff';
+      }
+      
+      function unhighlight() {
+        uploadArea.style.borderColor = '#ddd';
+        uploadArea.style.backgroundColor = '#f9f9f9';
+      }
+      
+      // Handle file drop
+      uploadArea.addEventListener('drop', function(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+          handleFile(files[0]);
+          
+          // Set the file input value for form submission
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(files[0]);
+          resumeFileInput.files = dataTransfer.files;
+        }
+      }, false);
+      
+      // Handle file input change
+      resumeFileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+          handleFile(this.files[0]);
+        }
+      });
+      
+      function handleFile(file) {
+        selectedFileObj = file;
+        
+        // Update the format dropdown based on file type
+        if (file.type === 'application/pdf') {
+          resumeFormatSelect.value = 'pdf';
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+          resumeFormatSelect.value = 'docx';
+        } else {
+          resumeFormatSelect.value = 'text';
+        }
+        
+        if (file.size > 10 * 1024 * 1024) { // 10MB
+          logToConsole('File size exceeds 10MB limit', 'error');
+          return;
+        }
+        
+        selectedFileDiv.textContent = `Selected file: ${file.name}`;
+        logToConsole(`File selected: ${file.name} (${formatFileSize(file.size)})`, 'info');
+      }
+      
+      function formatFileSize(bytes) {
+        if (bytes < 1024) {
+          return bytes + ' bytes';
+        } else if (bytes < 1024 * 1024) {
+          return (bytes / 1024).toFixed(2) + ' KB';
+        } else {
+          return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+      }
+      
+      // Load sample job description
+      loadSampleJobLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        jobDescriptionTextarea.value = sampleJobDescription;
+        logToConsole('Sample job description loaded', 'info');
+      });
+      
+      // Poll for job status
+      function pollJobStatus(jobId) {
+        const apiUrl = apiUrlInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+        const statusUrl = `${apiUrl.replace(/customize$/, '')}status/${jobId}`;
+        
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+        
+        pollInterval = setInterval(async () => {
+          try {
+            const response = await fetch(statusUrl, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`
+              }
+            });
+            
+            const data = await response.json();
+            logToConsole(data, data.status === 'error' ? 'error' : 'info');
+            
+            if (data.data && (data.data.status === 'completed' || data.data.status === 'failed')) {
+              clearInterval(pollInterval);
+              
+              if (data.data.status === 'completed') {
+                // Show result
+                resultContent.textContent = data.data.result;
+                resultContainer.style.display = 'block';
+                logToConsole('Customization completed successfully!', 'success');
+              } else {
+                logToConsole(`Customization failed: ${data.data.error}`, 'error');
+              }
+            }
+          } catch (error) {
+            logToConsole(`Error checking job status: ${error.message}`, 'error');
+          }
+        }, 3000); // Poll every 3 seconds
+      }
+      
+      // Handle customize button click
+      customizeButton.addEventListener('click', async function() {
+        // Hide result container if shown from previous run
+        resultContainer.style.display = 'none';
+        
+        // Validate inputs
+        const apiUrl = apiUrlInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+        const jobDescription = jobDescriptionTextarea.value.trim();
+        const isJobDescriptionUrl = isJobDescriptionUrlCheckbox.checked;
+        const resumeFormat = resumeFormatSelect.value;
+        
+        if (!apiUrl) {
+          logToConsole('API URL is required', 'error');
+          return;
+        }
+        
+        if (!apiKey) {
+          logToConsole('API Key is required', 'error');
+          return;
+        }
+        
+        if (!selectedFileObj) {
+          logToConsole('Please upload a resume file', 'error');
+          return;
+        }
+        
+        if (!jobDescription) {
+          logToConsole('Job description is required', 'error');
+          return;
+        }
+        
+        // Prepare form data
+        const formData = new FormData();
+        
+        try {
+          // Read the file
+          const resumeContent = await readFileAsText(selectedFileObj);
+          
+          // Create the request payload
+          const payload = {
+            resumeContent,
+            jobDescription,
+            resumeFormat,
+            isJobDescriptionUrl
+          };
+          
+          logToConsole('Submitting resume to API...', 'info');
+          logToConsole({
+            url: apiUrl,
+            resumeFormat,
+            isJobDescriptionUrl,
+            contentLength: resumeContent.length
+          }, 'info');
+          
+          // Make the request
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          const data = await response.json();
+          logToConsole(data, data.status === 'error' ? 'error' : 'success');
+          
+          if (data.status === 'success' && data.data && data.data.jobId) {
+            currentJobId = data.data.jobId;
+            logToConsole(`Job submitted successfully! Polling for status... (jobId: ${currentJobId})`, 'info');
+            pollJobStatus(currentJobId);
+          }
+        } catch (error) {
+          logToConsole(`Error submitting resume: ${error.message}`, 'error');
+        }
+      });
+      
+      // Read file as text
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          
+          reader.onload = function(e) {
+            const content = e.target.result;
+            resolve(content);
+          };
+          
+          reader.onerror = function(e) {
+            reject(new Error('Error reading file'));
+          };
+          
+          if (resumeFormatSelect.value === 'text') {
+            reader.readAsText(file);
+          } else {
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
