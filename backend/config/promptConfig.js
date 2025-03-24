@@ -18,17 +18,17 @@ const promptConfig = {
     resumeStrategist: 'resume-strategist-enhanced'
   },
   
-  // Optimization presets configuration
+  // Optimization presets configuration - all presets must use enhanced prompts
   optimizationPresets: {
     default: {
-      useEnhancedPrompts: true,
+      useEnhancedPrompts: true, // Always true, this is now enforced
       temperature: 0.7,
       profilerMaxTokens: 2000,
       researcherMaxTokens: 2000,
       strategistMaxTokens: 3000
     },
     ats_optimization: {
-      useEnhancedPrompts: true,
+      useEnhancedPrompts: true, // Enhanced prompts required
       temperature: 0.5,
       strategistMaxTokens: 3000,
       promptSuffix: `
@@ -90,14 +90,15 @@ const promptConfig = {
   /**
    * Get prompt template name based on optimization preset
    * @param {string} promptType - Type of prompt (profiler, researcher, resumeStrategist)
-   * @param {boolean} useEnhanced - Whether to use enhanced prompts
+   * @param {boolean} useEnhanced - Whether to use enhanced prompts (ignored - always uses enhanced)
    * @returns {string} - Prompt template name
    */
   getPromptName(promptType, useEnhanced = true) {
-    if (useEnhanced && this.enhanced[promptType]) {
-      return this.enhanced[promptType];
+    // Always use enhanced prompts regardless of the useEnhanced parameter
+    if (!this.enhanced[promptType]) {
+      throw new Error(`Enhanced prompt not found for type: ${promptType}`);
     }
-    return this.defaults[promptType];
+    return this.enhanced[promptType];
   }
 };
 

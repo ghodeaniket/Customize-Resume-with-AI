@@ -18,10 +18,10 @@ async function loadPromptTemplate(promptType, options = {}) {
     // Determine whether to use the cache
     const useCache = options.useCache !== undefined ? options.useCache : true;
     
-    // Determine whether to use enhanced prompts
-    const useEnhanced = options.useEnhanced !== undefined ? options.useEnhanced : true;
+    // Always use enhanced prompts
+    const useEnhanced = true;
     
-    // Get the prompt name from the configuration
+    // Get the prompt name from the configuration (always enhanced)
     const promptName = promptConfig.getPromptName(promptType, useEnhanced);
     
     // Check cache first if enabled
