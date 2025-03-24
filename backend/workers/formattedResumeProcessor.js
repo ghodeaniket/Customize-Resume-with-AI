@@ -16,11 +16,21 @@ class FormattedResumeProcessor extends BaseWorker {
    * Initialize the formatted resume processor
    */
   constructor() {
-    super('formatted-resume-processing', {
-      'customize-formatted-resume': this.processFormattedCustomization
-    });
+    // Initialize the base worker with the queue name and processors mapping
+    const processors = {
+      'customize-formatted-resume': async function(job) {
+        return await this.processFormattedCustomization(job);
+      }
+    };
     
+    super('formatted-resume-processing', processors);
+    
+    // Set up services after super() call
     this.aiService = new AIService(this.aiClient);
+    this.services = {
+      aiService: this.aiService
+    };
+    
     logger.info('Formatted resume processor worker started');
   }
   

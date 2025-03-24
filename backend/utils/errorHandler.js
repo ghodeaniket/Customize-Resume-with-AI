@@ -33,14 +33,46 @@ class AppError extends Error {
   }
   
   toJSON() {
+    // Return a safe JSON representation of the error
     return {
       error: this.name,
       message: this.message,
       statusCode: this.statusCode,
-      details: this.details,
+      details: this.safeSerialize(this.details),
       timestamp: this.timestamp,
       stack: config.app.environment === 'development' ? this.stack : undefined
     };
+  }
+  
+  // Safely serialize objects to avoid circular references
+  safeSerialize(obj) {
+    try {
+      const seen = new WeakSet();
+      return JSON.parse(JSON.stringify(obj, (key, value) => {
+        // Handle circular references
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular Reference]';
+          }
+          seen.add(value);
+          
+          // Handle request/response objects
+          if (value.constructor && 
+             (value.constructor.name === 'IncomingMessage' || 
+              value.constructor.name === 'ClientRequest' ||
+              value.constructor.name === 'ServerResponse')) {
+            return `[${value.constructor.name}]`;
+          }
+        }
+        return value;
+      }));
+    } catch (e) {
+      // If serialization fails, return a simple object
+      return { 
+        serializationError: true,
+        message: 'Error object could not be fully serialized'
+      };
+    }
   }
 }
 
@@ -88,7 +120,7 @@ function errorMiddleware(err, req, res, next) {
     });
   } else {
     logger.warn('Client error', { 
-      error: error.toJSON(),
+      error: error.message || 'Unknown error',
       requestId: req.id,
       url: req.originalUrl,
       method: req.method
@@ -139,7 +171,7 @@ function captureError(error, context = {}) {
     errorType = ErrorTypes.AI_SERVICE;
   }
   
-  // Create a standardized error
+  // Create a standardized error with safe details
   const appError = new AppError(
     error.message,
     errorType,
@@ -148,8 +180,7 @@ function captureError(error, context = {}) {
       originalError: {
         name: error.name,
         message: error.message,
-        code: error.code,
-        response: error.response?.data
+        code: error.code
       },
       context
     }
@@ -157,8 +188,9 @@ function captureError(error, context = {}) {
   
   // Log the error with context
   logger.error('Error captured', {
-    error: appError.toJSON(),
-    context
+    error: appError.message,
+    type: errorType,
+    stack: error.stack
   });
   
   // Return the processed error

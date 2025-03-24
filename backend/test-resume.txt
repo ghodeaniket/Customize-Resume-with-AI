@@ -1,0 +1,31 @@
+John Doe
+Software Engineer
+john.doe@example.com | (123) 456-7890 | github.com/johndoe
+
+SUMMARY
+Experienced software engineer with 5 years of experience building scalable web applications and services. Proficient in JavaScript, Python, and cloud technologies.
+
+EXPERIENCE
+Senior Software Engineer, Tech Solutions Inc.
+January 2020 - Present
+- Developed and maintained RESTful APIs using Node.js and Express
+- Implemented CI/CD pipelines using GitHub Actions and Docker
+- Improved application performance by 40% through code optimization
+- Led a team of 3 junior developers on a customer-facing project
+
+Software Engineer, WebApp Co.
+June 2017 - December 2019
+- Built responsive web applications using React and Redux
+- Designed and implemented database schemas using PostgreSQL
+- Collaborated with cross-functional teams to deliver features on time
+- Reduced API response time by 30% through query optimization
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of Technology, 2017
+
+SKILLS
+Languages: JavaScript (ES6+), Python, HTML/CSS, SQL
+Frameworks: React, Node.js, Express, Django
+Tools: Git, Docker, AWS, MongoDB, PostgreSQL
+Methodologies: Agile/Scrum, Test-Driven Development
