@@ -9,7 +9,7 @@ RUN apk add --no-cache tini
 # Install production dependencies first (layer caching optimization)
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm install --production
 
 # Build stage for development dependencies
 FROM deps AS dev-deps
@@ -41,10 +41,6 @@ RUN mkdir -p uploads && \
 # Set timezone
 ENV TZ=UTC
 
-# Run migrations
-RUN echo "#!/bin/sh\nif [ \"$NODE_ENV\" = \"production\" ]; then\n  npm run migrate:prod\nelse\n  npm run migrate:dev\nfi\n\nexec \"\$@\"" > /entrypoint.sh && \
-    chmod +x /entrypoint.sh
-
 # Switch to non-root user
 USER node
 
@@ -52,7 +48,7 @@ USER node
 EXPOSE 3000
 
 # Use tini as entrypoint
-ENTRYPOINT ["/sbin/tini", "--", "/entrypoint.sh"]
+ENTRYPOINT ["/sbin/tini", "--"]
 
 # Start the application
 CMD ["node", "server.js"]

@@ -1,143 +1,176 @@
 // utils/validator.js
-const Joi = require('joi');
+const Ajv = require('ajv');
 const logger = require('./logger');
 
+// Initialize validator
+const ajv = new Ajv({ allErrors: true });
+
 /**
- * Validator utility for API request validation
+ * Middleware factory for validating request body
+ * @param {Object} schema - JSON schema for validation
+ * @returns {function} Express middleware
  */
-class Validator {
-  /**
-   * Validate request against schema
-   * @param {Object} req - Express request object
-   * @param {Object} schema - Joi validation schema
-   * @returns {Object} - Validation result
-   */
-  static validate(data, schema) {
-    const options = {
-      abortEarly: false,
-      stripUnknown: true
-    };
+exports.validateBody = (schema) => {
+  const validate = ajv.compile(schema);
+  
+  return (req, res, next) => {
+    const valid = validate(req.body);
     
-    const { error, value } = schema.validate(data, options);
-    
-    if (error) {
-      const errorDetails = error.details.map(detail => ({
-        message: detail.message,
-        path: detail.path
-      }));
+    if (!valid) {
+      logger.warn('Validation error in request body', { errors: validate.errors });
       
-      logger.debug('Validation error', { errorDetails });
-      
-      throw {
+      return next({
         statusCode: 400,
         message: 'Invalid request data',
-        details: errorDetails
-      };
+        details: validate.errors.map(err => ({
+          field: err.instancePath.substring(1), // Remove leading slash
+          message: err.message
+        }))
+      });
     }
     
-    return value;
-  }
-  
-  /**
-   * Middleware for validating request body
-   * @param {Object} schema - Joi schema for validation
-   * @returns {Function} - Express middleware
-   */
-  static validateBody(schema) {
-    return (req, res, next) => {
-      try {
-        req.validatedBody = this.validate(req.body, schema);
-        next();
-      } catch (error) {
-        next(error);
-      }
-    };
-  }
-  
-  /**
-   * Middleware for validating request params
-   * @param {Object} schema - Joi schema for validation
-   * @returns {Function} - Express middleware
-   */
-  static validateParams(schema) {
-    return (req, res, next) => {
-      try {
-        req.validatedParams = this.validate(req.params, schema);
-        next();
-      } catch (error) {
-        next(error);
-      }
-    };
-  }
-  
-  /**
-   * Middleware for validating request query
-   * @param {Object} schema - Joi schema for validation
-   * @returns {Function} - Express middleware
-   */
-  static validateQuery(schema) {
-    return (req, res, next) => {
-      try {
-        req.validatedQuery = this.validate(req.query, schema);
-        next();
-      } catch (error) {
-        next(error);
-      }
-    };
-  }
-  
-  /**
-   * Common validation schemas
-   */
-  static schemas = {
-    // Resume customization request schema
-    resumeCustomization: Joi.object({
-      resumeContent: Joi.string().required().min(10)
-        .messages({
-          'string.empty': 'Resume content is required',
-          'string.min': 'Resume content is too short to be valid'
-        }),
-      jobDescription: Joi.string().required().min(10)
-        .messages({
-          'string.empty': 'Job description is required',
-          'string.min': 'Job description is too short to be valid'
-        }),
-      resumeFormat: Joi.string().valid('text', 'pdf', 'docx', 'html', 'json').default('text')
-        .messages({
-          'any.only': 'Resume format must be one of: text, pdf, docx, html, json'
-        }),
-      outputFormat: Joi.string().valid('text', 'markdown', 'html', 'pdf').default('text')
-        .messages({
-          'any.only': 'Output format must be one of: text, markdown, html, pdf'
-        }),
-      preserveOriginalFormat: Joi.boolean().default(false)
-        .messages({
-          'boolean.base': 'Preserve original format must be a boolean'
-        }),
-      isJobDescriptionUrl: Joi.boolean().default(false),
-      profilerModel: Joi.string(),
-      researcherModel: Joi.string(),
-      strategistModel: Joi.string(),
-      markdownModel: Joi.string(),
-      htmlModel: Joi.string()
-    }),
-    
-    // Job status request schema
-    jobStatus: Joi.object({
-      jobId: Joi.string().required()
-        .messages({
-          'string.empty': 'Job ID is required'
-        })
-    }),
-    
-    // Generic ID parameter schema
-    idParam: Joi.object({
-      id: Joi.string().required()
-        .messages({
-          'string.empty': 'ID parameter is required'
-        })
-    })
+    // Store validated body for controllers to use
+    req.validatedBody = req.body;
+    next();
   };
-}
+};
 
-module.exports = Validator;
+/**
+ * Middleware factory for validating request parameters
+ * @param {Object} schema - JSON schema for validation
+ * @returns {function} Express middleware
+ */
+exports.validateParams = (schema) => {
+  const validate = ajv.compile(schema);
+  
+  return (req, res, next) => {
+    const valid = validate(req.params);
+    
+    if (!valid) {
+      logger.warn('Validation error in request parameters', { errors: validate.errors });
+      
+      return next({
+        statusCode: 400,
+        message: 'Invalid request parameters',
+        details: validate.errors.map(err => ({
+          field: err.instancePath.substring(1), // Remove leading slash
+          message: err.message
+        }))
+      });
+    }
+    
+    // Store validated params for controllers to use
+    req.validatedParams = req.params;
+    next();
+  };
+};
+
+/**
+ * Middleware factory for validating query parameters
+ * @param {Object} schema - JSON schema for validation
+ * @returns {function} Express middleware
+ */
+exports.validateQuery = (schema) => {
+  const validate = ajv.compile(schema);
+  
+  return (req, res, next) => {
+    const valid = validate(req.query);
+    
+    if (!valid) {
+      logger.warn('Validation error in query parameters', { errors: validate.errors });
+      
+      return next({
+        statusCode: 400,
+        message: 'Invalid query parameters',
+        details: validate.errors.map(err => ({
+          field: err.instancePath.substring(1), // Remove leading slash
+          message: err.message
+        }))
+      });
+    }
+    
+    // Store validated query for controllers to use
+    req.validatedQuery = req.query;
+    next();
+  };
+};
+
+// Define validation schemas
+exports.schemas = {
+  resumeCustomization: {
+    type: 'object',
+    required: ['resumeContent', 'jobDescription'],
+    properties: {
+      resumeContent: { type: 'string', minLength: 1 },
+      jobDescription: { type: 'string', minLength: 1 },
+      resumeFormat: { type: 'string', enum: ['text', 'pdf', 'docx', 'html', 'json'] },
+      outputFormat: { type: 'string', enum: ['text', 'markdown', 'html', 'pdf'] },
+      preserveOriginalFormat: { type: 'boolean' },
+      isJobDescriptionUrl: { type: 'boolean' },
+      profilerModel: { type: 'string' },
+      researcherModel: { type: 'string' },
+      strategistModel: { type: 'string' },
+      markdownModel: { type: 'string' },
+      htmlModel: { type: 'string' }
+    }
+  },
+  jobStatus: {
+    type: 'object',
+    required: ['jobId'],
+    properties: {
+      jobId: { type: 'string', minLength: 1 }
+    }
+  },
+  jobDescription: {
+    type: 'object',
+    required: ['title', 'content'],
+    properties: {
+      title: { type: 'string', minLength: 1 },
+      content: { type: 'string', minLength: 1 },
+      sourceUrl: { type: 'string' }
+    }
+  },
+  idParam: {
+    type: 'object',
+    required: ['id'],
+    properties: {
+      id: { type: 'string', minLength: 1 }
+    }
+  }
+};
+
+// Validation middleware for resume uploads
+exports.validateResume = (req, res, next) => {
+  if (!req.file) {
+    return next({
+      statusCode: 400,
+      message: 'No file uploaded',
+    });
+  }
+
+  if (!req.body.title || typeof req.body.title !== 'string' || req.body.title.trim() === '') {
+    return next({
+      statusCode: 400,
+      message: 'Title is required',
+    });
+  }
+
+  // Validate file type
+  const fileType = req.file.mimetype;
+  if (
+    fileType !== 'application/pdf' &&
+    fileType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    return next({
+      statusCode: 400,
+      message: 'Only PDF and DOCX files are supported',
+    });
+  }
+
+  // Create validatedBody object
+  req.validatedBody = {
+    title: req.body.title
+  };
+
+  next();
+};

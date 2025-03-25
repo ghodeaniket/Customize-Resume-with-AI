@@ -42,8 +42,10 @@ const parsePDF = async (file: File): Promise<string> => {
         
         const arrayBuffer = event.target.result as ArrayBuffer;
         const uint8Array = new Uint8Array(arrayBuffer);
+        // Convert Uint8Array to Buffer for pdf-parse
+        const buffer = Buffer.from(uint8Array);
         
-        const pdfData = await pdfParse(uint8Array);
+        const pdfData = await pdfParse(buffer);
         resolve(pdfData.text);
       } catch (error) {
         reject(error);

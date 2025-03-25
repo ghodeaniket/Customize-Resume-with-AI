@@ -1,0 +1,74 @@
+version: '3.8'
+
+# Development-specific overrides for docker-compose.yml
+services:
+  # Frontend development configuration
+  frontend:
+    build:
+      target: deps  # Use the deps stage from Dockerfile
+    command: npm run dev
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./next.config.js:/app/next.config.js
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./prisma:/app/prisma
+      - ./.env:/app/.env
+    environment:
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"  # For Next.js dev server
+
+  # Backend API development configuration
+  api:
+    command: npm run dev
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DEBUG=app:*  # Enable debug logging
+    ports:
+      - "8080:3000"  # Main API port
+      - "9229:9229"  # Node.js debugging port
+
+  # Resume worker development configuration
+  resume-worker:
+    command: npm run dev:worker
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DEBUG=worker:*  # Enable debug logging
+    deploy:
+      replicas: 1  # Single worker for development
+
+  # Formatted resume worker development configuration
+  formatted-worker:
+    command: npx nodemon workers/formattedResumeProcessor.js
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DEBUG=worker:*  # Enable debug logging
+
+  # Local PostgreSQL for development
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=resume_customizer_dev
+
+  # Disable services not needed for local development
+  nginx:
+    profiles: ["prod"]  # Only included when running with --profile prod
+
+  prometheus:
+    profiles: ["monitoring"]  # Only included when running with --profile monitoring
+
+  grafana:
+    profiles: ["monitoring"]  # Only included when running with --profile monitoring

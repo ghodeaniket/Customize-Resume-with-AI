@@ -13,6 +13,8 @@ const logger = require('./utils/logger');
 const resumeRoutes = require('./routes/resume');
 const formattedResumeRoutes = require('./routes/formattedResume');
 const healthRoutes = require('./routes/health');
+const jobDescriptionRoutes = require('./routes/jobDescription');
+const resumesRoutes = require('./routes/resumes');
 
 // Create Express app
 const app = express();
@@ -49,6 +51,8 @@ app.use('/api/v1/health', healthRoutes);
 // Main API routes
 app.use('/api/v1/resume', resumeRoutes);
 app.use('/api/v1/formatted-resume', formattedResumeRoutes);
+app.use('/api/v1/job-descriptions', jobDescriptionRoutes);
+app.use('/api/v1/resumes', resumesRoutes);
 
 // Root route
 app.get('/', (req, res) => {
