@@ -39,6 +39,15 @@ jspm_packages/
 # Next.js build output
 .next/
 
+# Upload directories
+backend/simplified/uploads/
+backend/uploads/
+
+# Environment variables
+**/.env
+**/.env.local
+**/.env.development
+
 # Optional npm cache directory
 .npm
 

@@ -37,28 +37,39 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Get API key from environment variables
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
-// Log API key status for debugging
-console.log(`OpenRouter API key status: ${OPENROUTER_API_KEY ? 'Valid API key is set' : 'No API key found'}`);
+// Log API key status for debugging (without exposing the key)
+console.log(`OpenRouter API key status: ${process.env.OPENROUTER_API_KEY ? 'Valid API key is set' : 'No API key found'}`);
 
 // OpenRouter client for AI requests
 const openrouterClient = axios.create({
   baseURL: 'https://openrouter.ai/api/v1',
   headers: {
-    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
     'HTTP-Referer': 'https://localhost:3000',
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'X-Title': 'Resume Customizer'
   },
   timeout: 120000 // 120 seconds timeout
 });
 
-// Test the OpenRouter API connection
-openrouterClient.get('/models')
-  .then(() => console.log('Successfully connected to OpenRouter API'))
-  .catch(error => console.error('Error connecting to OpenRouter API:', 
-    error.response ? `Status: ${error.response.status}, Message: ${JSON.stringify(error.response.data)}` : error.message));
+// Check if API key is set
+if (!process.env.OPENROUTER_API_KEY) {
+  console.error("⚠️ OpenRouter API key is not set. Please set OPENROUTER_API_KEY in the .env file.");
+  console.log("You can get an API key from https://openrouter.ai/keys");
+} else {
+  // Test the OpenRouter API connection
+  openrouterClient.get('/models')
+    .then(() => console.log('✅ Successfully connected to OpenRouter API'))
+    .catch(error => {
+      console.error('❌ Error connecting to OpenRouter API:', 
+        error.response ? `Status: ${error.response.status}, Message: ${JSON.stringify(error.response.data)}` : error.message);
+      
+      if (error.response && error.response.status === 401) {
+        console.error("Authentication failed! Please check your API key format and validity.");
+        console.log("API keys should be in format: sk-or-v1-xxx...");
+      }
+    });
+}
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {
