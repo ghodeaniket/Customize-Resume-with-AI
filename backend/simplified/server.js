@@ -1,4 +1,7 @@
 // simplified/server.js
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -7,6 +10,10 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+
+// Print environment variables for debugging (excluding sensitive data)
+console.log(`Environment: PORT=${process.env.PORT}`);
+console.log(`OpenRouter API Key status: ${process.env.OPENROUTER_API_KEY ? 'Set' : 'Not set'}`);
 const app = express();
 const PORT = process.env.PORT || 9000;
 
@@ -30,16 +37,28 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Get API key from environment variables
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+// Log API key status for debugging
+console.log(`OpenRouter API key status: ${OPENROUTER_API_KEY ? 'Valid API key is set' : 'No API key found'}`);
+
 // OpenRouter client for AI requests
 const openrouterClient = axios.create({
   baseURL: 'https://openrouter.ai/api/v1',
   headers: {
-    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || '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'}`,
-    'HTTP-Referer': process.env.SERVICE_URL || 'http://localhost:3000',
+    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+    'HTTP-Referer': 'https://localhost:3000',
     'Content-Type': 'application/json'
   },
-  timeout: 60000 // 60 seconds timeout
+  timeout: 120000 // 120 seconds timeout
 });
+
+// Test the OpenRouter API connection
+openrouterClient.get('/models')
+  .then(() => console.log('Successfully connected to OpenRouter API'))
+  .catch(error => console.error('Error connecting to OpenRouter API:', 
+    error.response ? `Status: ${error.response.status}, Message: ${JSON.stringify(error.response.data)}` : error.message));
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {
