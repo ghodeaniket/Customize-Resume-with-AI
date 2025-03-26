@@ -15,6 +15,13 @@ export class ApiClient {
   }
 
   /**
+   * Set the API key
+   */
+  setApiKey(apiKey: string): void {
+    this.apiKey = apiKey;
+  }
+
+  /**
    * Get common headers for API requests
    */
   private getHeaders(): HeadersInit {
